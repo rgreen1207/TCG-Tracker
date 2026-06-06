@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Search · PkTracker{% endblock %}
+{% block breadcrumb %}Search{% endblock %}
+
+{% block head %}
+{# Inject the search index for Fuse.js — hidden script tag #}
+<script type="application/json" id="search-index-data">{{ index_json | safe }}</script>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Search Cards & Products</h1>
+  <p class="page-sub">Type in English — Japanese names shown automatically. Typos are OK.</p>
+</div>
+
+<div class="search-box">
+  <input
+    type="text"
+    id="search-input"
+    class="search-input"
+    placeholder="e.g. Charizard, Pikachu VMAX, Battle Partners box…"
+    value="{{ q }}"
+    autocomplete="off"
+    spellcheck="false"
+  >
+  <span class="search-icon">⌕</span>
+</div>
+
+<div id="search-results" class="search-results">
+  {# Pre-rendered server-side results for initial page load with ?q= #}
+  {% if q and results %}
+    {% for r in results %}
+    <a href="{% if r.type == 'product' %}/sets/{{ r.set_id or '' }}{% else %}/search?q={{ r.name_en | urlencode }}{% endif %}" class="search-result-item fade-in" style="text-decoration:none">
+      <div style="flex:1;min-width:0">
+        <div class="result-name">{{ r.name_en }}</div>
+        {% if r.name_jp %}<div class="result-name-jp">{{ r.name_jp }}</div>{% endif %}
+        <div class="result-set" style="margin-top:3px">{{ r.set_name or '' }}</div>
+      </div>
+      <div style="display:flex;gap:5px;flex-shrink:0">
+        {% if r.type == 'card' %}
+          <span class="badge badge-pack">Card</span>
+        {% else %}
+          <span class="badge badge-box">{{ (r.product_type or 'Product') | replace('_',' ') | title }}</span>
+        {% endif %}
+        <span class="badge {% if r.is_japanese != false %}badge-jp{% else %}badge-en{% endif %}">
+          {% if r.is_japanese != false %}JP{% else %}EN{% endif %}
+        </span>
+      </div>
+    </a>
+    {% endfor %}
+  {% elif q %}
+    <div class="empty-state">
+      <div class="empty-icon">◌</div>
+      <div class="empty-text">No results for "{{ q }}" — try a shorter search term or check your spelling</div>
+    </div>
+  {% else %}
+    <div style="color:var(--text3);font-size:13px;padding:8px 0">
+      Start typing to search across {{ index_json | length }} cards and products…
+    </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/search.js"></script>
+{% endblock %}

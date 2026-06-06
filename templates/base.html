@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Pokemon Price Tracker{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/main.css">
+  {% block head %}{% endblock %}
+</head>
+<body>
+
+<div class="sidebar-overlay"></div>
+
+<div class="layout">
+  <!-- ── Sidebar ── -->
+  <nav class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-gem">◈</div>
+      <div class="logo-text">
+        <div class="logo-title">PkTracker</div>
+        <div class="logo-sub">Pi Edition</div>
+      </div>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-label">Browse</div>
+      <a href="/"               class="nav-item {% if request.url.path == '/' %}active{% endif %}"><span class="nav-icon">⬡</span> Dashboard</a>
+      <a href="/sets"           class="nav-item {% if '/sets' in request.url.path and 'special' not in request.url.path %}active{% endif %}"><span class="nav-icon">⬡</span> Sets</a>
+      <a href="/special-boxes"  class="nav-item {% if 'special-boxes' in request.url.path %}active{% endif %}"><span class="nav-icon">⬡</span> Special Boxes</a>
+      <a href="/search"         class="nav-item {% if '/search' in request.url.path %}active{% endif %}"><span class="nav-icon">⬡</span> Search</a>
+
+      <div class="nav-label">My Cards</div>
+      <a href="/collection"     class="nav-item {% if '/collection' in request.url.path %}active{% endif %}"><span class="nav-icon">⬡</span> Collection</a>
+      <a href="/watchlist"      class="nav-item {% if '/watchlist' in request.url.path %}active{% endif %}"><span class="nav-icon">⬡</span> Watchlist</a>
+      <a href="/alerts"         class="nav-item {% if '/alerts' in request.url.path %}active{% endif %}"><span class="nav-icon">⬡</span> Alerts</a>
+
+      {% if admin %}
+      <div class="nav-label">Admin</div>
+      <a href="/admin"          class="nav-item {% if '/admin' in request.url.path %}active{% endif %}"><span class="nav-icon">⬡</span> Admin Panel</a>
+      <a href="/docs"           class="nav-item" target="_blank"><span class="nav-icon">⬡</span> API Docs</a>
+      {% endif %}
+    </div>
+
+    <div class="sidebar-foot">
+      <div class="status-indicator" id="status-dot"></div>
+      <span class="status-label" id="status-label">Connecting…</span>
+    </div>
+  </nav>
+
+  <!-- ── Main ── -->
+  <div class="main">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="nav-toggle" aria-label="Menu">☰</button>
+        <span class="page-breadcrumb">{% block breadcrumb %}{% endblock %}</span>
+      </div>
+      <div class="topbar-right">
+        <span class="topbar-poll-info" id="poll-info"></span>
+        {% if admin %}
+          <button class="btn btn-gold btn-sm" id="btn-poll-now">⟳ Poll Now</button>
+          <form action="/logout" method="post" style="margin:0">
+            <button type="submit" class="btn btn-sm" style="border-color:var(--border);color:var(--text2)">Sign Out</button>
+          </form>
+        {% else %}
+          <a href="/login" class="btn btn-sm" style="border-color:var(--border);color:var(--text2)">Admin</a>
+        {% endif %}
+      </div>
+    </header>
+
+    <div class="content">
+      {% block content %}{% endblock %}
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fuse.js@7.0.0/dist/fuse.min.js"></script>
+<script src="/static/js/main.js"></script>
+<script src="/static/js/charts.js"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

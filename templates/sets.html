@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Sets · PkTracker{% endblock %}
+{% block breadcrumb %}Sets{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Pokemon Sets</h1>
+  <p class="page-sub">{{ sets|length }} set{{ 's' if sets|length != 1 }} · Browse Japanese and English releases</p>
+</div>
+
+{# ── Filters ── #}
+<div class="filter-bar">
+  <a href="/sets" class="filter-tab {% if lang == 'all' %}active{% endif %}">All</a>
+  <a href="/sets?lang=jp" class="filter-tab {% if lang == 'jp' %}active{% endif %}">🇯🇵 Japanese</a>
+  <a href="/sets?lang=en" class="filter-tab {% if lang == 'en' %}active{% endif %}">🇺🇸 English</a>
+  <div style="margin-left:auto">
+    <form method="get" action="/sets" style="display:flex;gap:8px;align-items:center">
+      {% if lang != 'all' %}<input type="hidden" name="lang" value="{{ lang }}">{% endif %}
+      <input type="text" name="q" value="{{ q }}" placeholder="Search sets…" class="form-input" style="width:200px;padding:6px 12px">
+      <button type="submit" class="btn btn-primary btn-sm">Search</button>
+      {% if q %}<a href="/sets{% if lang != 'all' %}?lang={{ lang }}{% endif %}" class="btn btn-sm" style="border-color:var(--border);color:var(--text2)">✕ Clear</a>{% endif %}
+    </form>
+  </div>
+</div>
+
+{% if sets %}
+<div class="price-grid">
+  {% for s in sets %}
+  <a href="/sets/{{ s.id }}" style="text-decoration:none">
+    <div class="price-card" style="cursor:pointer">
+      <div class="card-shine"></div>
+      <div class="card-top">
+        {% if s.image_url %}
+          <img src="{{ s.image_url }}" alt="" class="card-img" loading="lazy">
+        {% else %}
+          <div class="card-img-placeholder">🃏</div>
+        {% endif %}
+        <div class="card-meta">
+          <div class="card-name">{{ s.name_en }}</div>
+          {% if s.name_jp %}<div class="card-name-jp">{{ s.name_jp }}</div>{% endif %}
+          <div class="card-badges" style="margin-top:5px">
+            {% if s.is_japanese %}
+              <span class="badge badge-jp">JP</span>
+            {% else %}
+              <span class="badge badge-en">EN</span>
+            {% endif %}
+            {% if s.series %}<span class="badge" style="background:var(--bg3);color:var(--text3);border-color:var(--border)">{{ s.series }}</span>{% endif %}
+          </div>
+        </div>
+      </div>
+      <hr class="card-divider">
+      <div class="card-footer">
+        <span class="card-source">
+          {% if s.release_date %}Released {{ s.release_date }}{% else %}Unknown release{% endif %}
+        </span>
+        <span class="btn btn-primary btn-sm">View →</span>
+      </div>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+
+{% else %}
+<div class="empty-state">
+  <div class="empty-icon">◌</div>
+  <div class="empty-text">
+    {% if q %}No sets matching "{{ q }}"{% else %}No sets added yet{% endif %}
+    {% if admin %}<br><a href="/admin" class="btn btn-gold" style="margin-top:14px;display:inline-flex">+ Add Set</a>{% endif %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,263 @@
+{% extends "base.html" %}
+{% block title %}{{ pokemon_set.name_en }} · PkTracker{% endblock %}
+{% block breadcrumb %}<a href="/sets" style="color:var(--text2)">Sets</a> / {{ pokemon_set.name_en }}{% endblock %}
+
+{% block content %}
+<div class="page-header" style="display:flex;align-items:flex-start;gap:18px;flex-wrap:wrap">
+  {% if pokemon_set.image_url %}
+    <img src="{{ pokemon_set.image_url }}" alt="{{ pokemon_set.name_en }}" style="width:72px;height:72px;object-fit:contain;border-radius:10px;background:var(--bg3)">
+  {% endif %}
+  <div style="flex:1">
+    <h1 class="page-title">{{ pokemon_set.name_en }}</h1>
+    {% if pokemon_set.name_jp %}<div style="font-size:16px;color:var(--text2);margin-top:2px">{{ pokemon_set.name_jp }}</div>{% endif %}
+    <p class="page-sub" style="margin-top:6px">
+      {% if pokemon_set.is_japanese %}<span class="badge badge-jp">Japanese</span>{% else %}<span class="badge badge-en">English</span>{% endif %}
+      {% if pokemon_set.series %}<span class="badge" style="background:var(--bg3);color:var(--text3);border-color:var(--border)">{{ pokemon_set.series }}</span>{% endif %}
+      {% if pokemon_set.release_date %}&nbsp;· Released {{ pokemon_set.release_date }}{% endif %}
+      &nbsp;· {{ products|length }} product{{ 's' if products|length != 1 }}
+      · {{ cards|length }} card{{ 's' if cards|length != 1 }}
+    </p>
+  </div>
+</div>
+
+{# ── Products ── #}
+{% if products %}
+<div class="section-header">
+  <div class="section-bar"></div>
+  <span class="section-title">Products</span>
+</div>
+<div class="price-grid">
+  {% for p in products %}
+  {% set is_deal = p.msrp_diff is not none and p.msrp_diff < 0 %}
+  <div class="price-card {% if is_deal %}deal{% endif %}">
+    <div class="card-shine"></div>
+    <div class="card-top">
+      {% if p.image_url %}
+        <img src="{{ p.image_url }}" alt="" class="card-img">
+      {% else %}
+        <div class="card-img-placeholder">
+          {% if p.product_type == 'booster_pack' %}🃏{% elif p.product_type == 'booster_box' %}📦{% else %}🎁{% endif %}
+        </div>
+      {% endif %}
+      <div class="card-meta">
+        <div class="card-name">{{ p.name_en }}</div>
+        {% if p.name_jp %}<div class="card-name-jp">{{ p.name_jp }}</div>{% endif %}
+        <div class="card-badges" style="margin-top:4px">
+          {% if p.product_type == 'booster_pack' %}<span class="badge badge-pack">Pack</span>
+          {% elif p.product_type == 'booster_box' %}<span class="badge badge-box">Box</span>
+          {% elif p.product_type == 'etb' %}<span class="badge badge-etb">ETB</span>
+          {% elif p.product_type == 'gift_set' %}<span class="badge badge-special">Gift Set</span>
+          {% elif p.product_type == 'special_box' %}<span class="badge badge-special">Special Box</span>
+          {% else %}<span class="badge badge-special">{{ p.product_type | replace('_',' ') | title }}</span>{% endif %}
+          {% if is_deal %}<span class="badge badge-deal">↓ Below MSRP</span>{% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="card-prices">
+      {% if p.lowest_usd %}
+        <div class="price-main">${{ "%.2f"|format(p.lowest_usd) }}</div>
+        <div class="price-secondary">¥{{ "{:,.0f}".format(p.lowest_jpy) if p.lowest_jpy else '—' }}</div>
+        {% if p.msrp_diff is not none %}
+          <div class="price-msrp-diff {% if p.msrp_diff < 0 %}msrp-diff-neg{% elif p.msrp_diff > 0 %}msrp-diff-pos{% else %}msrp-diff-zero{% endif %}">
+            {% if p.msrp_diff < 0 %}▼ ${{ "%.2f"|format(p.msrp_diff|abs) }} vs MSRP
+            {% elif p.msrp_diff > 0 %}▲ +${{ "%.2f"|format(p.msrp_diff) }} vs MSRP
+            {% else %}= MSRP{% endif %}
+          </div>
+        {% endif %}
+      {% else %}
+        <div class="price-main" style="color:var(--text3)">—</div>
+        <div class="price-secondary">No price data</div>
+      {% endif %}
+      {% if p.msrp_usd %}
+        <div style="font-size:10px;color:var(--text3);margin-top:3px">MSRP ${{ "%.2f"|format(p.msrp_usd) }}</div>
+      {% endif %}
+    </div>
+
+    <div class="sparkline-wrap">
+      <canvas id="spark-p{{ p.id }}" height="40"></canvas>
+    </div>
+    <hr class="card-divider">
+    <div class="card-footer">
+      <span class="card-source" style="font-size:9px">ID #{{ p.id }}</span>
+      <div style="display:flex;gap:6px">
+        {% if p.url %}<a href="{{ p.url }}" target="_blank" rel="noopener" class="btn btn-primary btn-sm">Buy ↗</a>{% endif %}
+        {% if admin %}
+          <button class="btn btn-sm btn-gold" onclick="openAddToCollection('product', {{ p.id }}, '{{ p.name_en | replace("'","") }}')">+ Collection</button>
+          <button class="btn btn-sm" style="border-color:var(--border);color:var(--text2)" onclick="openAddToWatchlist('product', {{ p.id }}, '{{ p.name_en | replace("'","") }}')">+ Watch</button>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{# ── Cards ── #}
+{% if cards %}
+<div class="section-header">
+  <div class="section-bar"></div>
+  <span class="section-title">Cards ({{ cards|length }})</span>
+</div>
+<div class="table-wrap">
+  <table class="data-table">
+    <thead><tr>
+      <th>#</th><th>Card</th><th>JP Name</th><th>Rarity</th>
+      {% if admin %}<th></th>{% endif %}
+    </tr></thead>
+    <tbody>
+      {% for c in cards %}
+      <tr>
+        <td class="td-mono td-dim">{{ c.card_number or '—' }}</td>
+        <td class="td-name">
+          {% if c.image_url %}<img src="{{ c.image_url }}" alt="" style="width:28px;height:28px;object-fit:contain;border-radius:4px;vertical-align:middle;margin-right:8px">{% endif %}
+          {{ c.name_en }}
+        </td>
+        <td class="td-dim" style="font-size:12px">{{ c.name_jp or '—' }}</td>
+        <td>{% if c.rarity %}<span class="badge" style="background:var(--bg3);color:var(--text2);border-color:var(--border)">{{ c.rarity }}</span>{% else %}—{% endif %}</td>
+        {% if admin %}
+        <td>
+          <div style="display:flex;gap:4px">
+            <button class="btn btn-sm btn-gold" onclick="openAddToCollection('card', {{ c.id }}, '{{ c.name_en | replace("'","") }}')">+ Own</button>
+            <button class="btn btn-sm" style="border-color:var(--border);color:var(--text2)" onclick="openAddToWatchlist('card', {{ c.id }}, '{{ c.name_en | replace("'","") }}')">+ Watch</button>
+          </div>
+        </td>
+        {% endif %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{# ── Add to Collection modal ── #}
+{% if admin %}
+<div class="modal-backdrop" id="modal-collection">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('modal-collection')">✕</button>
+    <div class="modal-title">Add to Collection</div>
+    <form id="form-collection" onsubmit="submitCollection(event)">
+      <input type="hidden" id="col-item-type" name="item_type">
+      <input type="hidden" id="col-item-id" name="item_id">
+      <div class="form-group">
+        <label class="form-label">Item</label>
+        <input type="text" id="col-item-name" class="form-input" readonly style="color:var(--text2)">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Status</label>
+          <select name="status" id="col-status" class="form-select" onchange="toggleGradeFields(this.value)">
+            <option value="raw">Raw (Ungraded)</option>
+            <option value="graded">Graded</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Quantity</label>
+          <input type="number" name="quantity" class="form-input" value="1" min="1">
+        </div>
+      </div>
+      <div id="grade-fields" style="display:none">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Grader</label>
+            <select name="grader" class="form-select">
+              <option value="">— Select —</option>
+              <option value="PSA">PSA</option>
+              <option value="TAG">TAG</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Grade</label>
+            <input type="number" name="grade" class="form-input" placeholder="e.g. 10" min="1" max="10" step="0.5">
+          </div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Acquired Price (USD)</label>
+          <input type="number" name="acquired_price_usd" class="form-input" placeholder="0.00" step="0.01">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Acquired Date</label>
+          <input type="date" name="acquired_date" class="form-input">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Notes</label>
+        <textarea name="notes" class="form-textarea" rows="2" placeholder="Optional notes…"></textarea>
+      </div>
+      <button type="submit" class="btn btn-gold" style="width:100%">Add to Collection</button>
+    </form>
+  </div>
+</div>
+
+{# ── Add to Watchlist modal ── #}
+<div class="modal-backdrop" id="modal-watchlist">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('modal-watchlist')">✕</button>
+    <div class="modal-title">Add to Watchlist</div>
+    <form id="form-watchlist" onsubmit="submitWatchlist(event)">
+      <input type="hidden" id="watch-item-type" name="item_type">
+      <input type="hidden" id="watch-item-id" name="item_id">
+      <div class="form-group">
+        <label class="form-label">Item</label>
+        <input type="text" id="watch-item-name" class="form-input" readonly style="color:var(--text2)">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Target Price (USD)</label>
+        <input type="number" name="target_price_usd" class="form-input" placeholder="Alert me when price drops to…" step="0.01">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Notes</label>
+        <textarea name="notes" class="form-textarea" rows="2" placeholder="Optional…"></textarea>
+      </div>
+      <button type="submit" class="btn btn-primary" style="width:100%">Add to Watchlist</button>
+    </form>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  {% for p in products %}renderSparkline('spark-p{{ p.id }}', 'product', {{ p.id }});{% endfor %}
+});
+
+function openAddToCollection(type, id, name) {
+  document.getElementById('col-item-type').value = type;
+  document.getElementById('col-item-id').value = id;
+  document.getElementById('col-item-name').value = name;
+  openModal('modal-collection');
+}
+function openAddToWatchlist(type, id, name) {
+  document.getElementById('watch-item-type').value = type;
+  document.getElementById('watch-item-id').value = id;
+  document.getElementById('watch-item-name').value = name;
+  openModal('modal-watchlist');
+}
+function toggleGradeFields(val) {
+  document.getElementById('grade-fields').style.display = val === 'graded' ? '' : 'none';
+}
+async function submitCollection(e) {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const body = Object.fromEntries(fd.entries());
+  if (body.grade) body.grade = parseFloat(body.grade);
+  if (body.quantity) body.quantity = parseInt(body.quantity);
+  if (body.acquired_price_usd) body.acquired_price_usd = parseFloat(body.acquired_price_usd);
+  const r = await fetch('/api/collection', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+  if (r.ok) { closeModal('modal-collection'); alert('Added to collection!'); }
+  else { alert('Error: ' + (await r.json()).detail); }
+}
+async function submitWatchlist(e) {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const body = Object.fromEntries(fd.entries());
+  if (body.target_price_usd) body.target_price_usd = parseFloat(body.target_price_usd);
+  const r = await fetch('/api/watchlist', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+  if (r.ok) { closeModal('modal-watchlist'); alert('Added to watchlist!'); }
+  else { alert('Error: ' + (await r.json()).detail); }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · PkTracker{% endblock %}
+{% block breadcrumb %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Price Dashboard</h1>
+  <p class="page-sub">
+    Live market prices · ¥1 ≈ ${{ "%.4f"|format(1/fx_rate) }} ·
+    {% if last_run %}Last poll {{ last_run.strftime('%H:%M UTC') }}{% else %}Awaiting first poll{% endif %}
+    {% if next_run %} · Next {{ next_run.strftime('%H:%M UTC') }}{% endif %}
+  </p>
+</div>
+
+{# ── Deal banner ── #}
+{% set deals = summary | selectattr("lowest_usd") | selectattr("msrp_diff") | list %}
+{% set real_deals = deals | selectattr("msrp_diff", "lt", 0) | list %}
+{% if real_deals %}
+<div class="deal-banner">
+  <span style="font-size:18px">🔥</span>
+  <span class="deal-banner-title">{{ real_deals|length }} SET{{ 's' if real_deals|length > 1 }} BELOW MSRP</span>
+  {% for d in real_deals %}
+    <span class="deal-pill">{{ d.name_en.replace('Japanese Pokemon ','').replace(' booster box','') }} · ${{ "%.2f"|format(d.lowest_usd) }}</span>
+  {% endfor %}
+</div>
+{% endif %}
+
+{# ── Price cards grid ── #}
+{% if summary %}
+<div class="price-grid">
+  {% for item in summary %}
+  {% set is_deal = item.msrp_diff and item.msrp_diff < 0 %}
+  <div class="price-card {% if is_deal %}deal{% endif %}">
+    <div class="card-shine"></div>
+    <div class="card-top">
+      {% if item.image_url %}
+        <img src="{{ item.image_url }}" alt="" class="card-img" loading="lazy">
+      {% else %}
+        <div class="card-img-placeholder">📦</div>
+      {% endif %}
+      <div class="card-meta">
+        <div class="card-name">{{ item.name_en | replace("Japanese Pokemon ","") | replace(" booster box","") | replace(" booster pack","") }}</div>
+        {% if item.name_jp %}<div class="card-name-jp">{{ item.name_jp }}</div>{% endif %}
+        <div class="card-badges">
+          {% if item.product_type == 'booster_pack' %}<span class="badge badge-pack">Pack</span>
+          {% elif item.product_type == 'booster_box' %}<span class="badge badge-box">Box</span>
+          {% else %}<span class="badge badge-special">{{ item.product_type | replace('_',' ') | title }}</span>{% endif %}
+          {% if is_deal %}<span class="badge badge-deal">↓ Below MSRP</span>{% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="card-prices">
+      {% if item.lowest_usd %}
+        <div class="price-main">${{ "%.2f"|format(item.lowest_usd) }}</div>
+        <div class="price-secondary">¥{{ "{:,.0f}".format(item.lowest_jpy) }}</div>
+        {% if item.msrp_diff is not none %}
+          <div class="price-msrp-diff {% if item.msrp_diff < 0 %}msrp-diff-neg{% elif item.msrp_diff > 0 %}msrp-diff-pos{% else %}msrp-diff-zero{% endif %}">
+            {% if item.msrp_diff < 0 %}▼ ${{ "%.2f"|format(item.msrp_diff|abs) }} vs MSRP{% elif item.msrp_diff > 0 %}▲ +${{ "%.2f"|format(item.msrp_diff) }} vs MSRP{% else %}= MSRP{% endif %}
+          </div>
+        {% endif %}
+        {% if item.msrp_usd %}
+          <div style="font-size:10px;color:var(--text3);margin-top:2px">MSRP ${{ "%.2f"|format(item.msrp_usd) }} / ¥{{ "{:,.0f}".format(item.msrp_jpy) if item.msrp_jpy else '—' }}</div>
+        {% endif %}
+      {% else %}
+        <div class="price-main" style="color:var(--text3)">—</div>
+        <div class="price-secondary">No data yet</div>
+      {% endif %}
+    </div>
+
+    <div class="sparkline-wrap">
+      <canvas id="spark-{{ item.id }}" height="40"></canvas>
+    </div>
+
+    <hr class="card-divider">
+    <div class="card-footer">
+      <span class="card-source">{{ item.source or '—' }}</span>
+      <div style="display:flex;gap:6px">
+        {% if item.url %}
+          <a href="{{ item.url }}" target="_blank" rel="noopener" class="btn btn-primary btn-sm">Buy ↗</a>
+        {% endif %}
+        <a href="/sets/{{ item.id }}" class="btn btn-sm" style="border-color:var(--border);color:var(--text2)">Details</a>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{% else %}
+<div class="empty-state">
+  <div class="empty-icon">◌</div>
+  <div class="empty-text">No products tracked yet.<br>Add products in the <a href="/admin">Admin Panel</a> to start tracking prices.</div>
+</div>
+{% endif %}
+
+{# ── Recent alerts ── #}
+{% if alerts %}
+<div class="section-header">
+  <div class="section-bar"></div>
+  <span class="section-title">Recent Alerts</span>
+  <a href="/alerts" class="btn btn-sm" style="margin-left:auto;border-color:var(--border);color:var(--text2)">View All</a>
+</div>
+<div class="table-wrap">
+  <table class="data-table">
+    <thead><tr>
+      <th>Time (UTC)</th><th>Item</th><th>Price</th><th>Source</th><th></th>
+    </tr></thead>
+    <tbody>
+      {% for a in alerts %}
+      <tr>
+        <td class="td-mono td-dim">{{ a.ts.strftime('%m/%d %H:%M') }}</td>
+        <td class="td-name">{{ a.item_name or '—' }}</td>
+        <td class="td-price-green">${{ "%.2f"|format(a.price_usd) if a.price_usd else '—' }}</td>
+        <td class="td-dim">{{ a.source or '—' }}</td>
+        <td>{% if a.url %}<a href="{{ a.url }}" target="_blank" class="btn btn-primary btn-sm">↗</a>{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Render sparklines for all visible price cards
+  document.addEventListener('DOMContentLoaded', () => {
+    {% for item in summary %}
+      renderSparkline('spark-{{ item.id }}', 'product', {{ item.id }});
+    {% endfor %}
+  });
+</script>
+{% endblock %}
