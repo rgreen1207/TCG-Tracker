@@ -1,0 +1,377 @@
+{% extends "base.html" %}
+{% block title %}Admin · PkTracker{% endblock %}
+{% block breadcrumb %}Admin Panel{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Admin Panel</h1>
+  <p class="page-sub">Manage sets, products, cards, and notification settings</p>
+</div>
+
+{# ── Tab navigation ── #}
+<div class="filter-bar" id="admin-tabs" style="margin-bottom:24px">
+  <button class="filter-tab active" data-tab="sets">Sets</button>
+  <button class="filter-tab" data-tab="products">Products</button>
+  <button class="filter-tab" data-tab="cards">Cards</button>
+  <button class="filter-tab" data-tab="notifications">Notifications</button>
+</div>
+
+{# ────────────────── SETS TAB ────────────────── #}
+<div id="tab-sets" class="admin-tab">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+    <span class="section-title" style="margin:0">{{ sets|length }} Sets</span>
+    <button class="btn btn-gold btn-sm" onclick="openModal('modal-add-set')">+ Add Set</button>
+  </div>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>Name (EN)</th><th>Name (JP)</th><th>Code</th><th>Series</th><th>Language</th><th>Release</th><th></th></tr></thead>
+      <tbody>
+        {% for s in sets %}
+        <tr>
+          <td class="td-name">{{ s.name_en }}</td>
+          <td class="td-dim" style="font-size:12px">{{ s.name_jp or '—' }}</td>
+          <td class="td-mono td-dim" style="font-size:11px">{{ s.set_code or '—' }}</td>
+          <td class="td-dim" style="font-size:12px">{{ s.series or '—' }}</td>
+          <td>{% if s.is_japanese %}<span class="badge badge-jp">JP</span>{% else %}<span class="badge badge-en">EN</span>{% endif %}</td>
+          <td class="td-dim" style="font-size:12px">{{ s.release_date or '—' }}</td>
+          <td>
+            <button class="btn btn-danger btn-sm btn-icon" onclick="deleteSet({{ s.id }}, this)" title="Delete set">✕</button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{# ────────────────── PRODUCTS TAB ────────────────── #}
+<div id="tab-products" class="admin-tab" style="display:none">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+    <span class="section-title" style="margin:0">Products</span>
+    <button class="btn btn-gold btn-sm" onclick="openModal('modal-add-product')">+ Add Product</button>
+  </div>
+  <div id="products-list">
+    <div class="empty-state" style="padding:30px">
+      <div class="empty-text">Loading products…</div>
+    </div>
+  </div>
+</div>
+
+{# ────────────────── CARDS TAB ────────────────── #}
+<div id="tab-cards" class="admin-tab" style="display:none">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+    <span class="section-title" style="margin:0">Cards</span>
+    <button class="btn btn-gold btn-sm" onclick="openModal('modal-add-card')">+ Add Card</button>
+  </div>
+  <div id="cards-list">
+    <div class="empty-state" style="padding:30px">
+      <div class="empty-text">Loading cards…</div>
+    </div>
+  </div>
+</div>
+
+{# ────────────────── NOTIFICATIONS TAB ────────────────── #}
+<div id="tab-notifications" class="admin-tab" style="display:none">
+  <div style="max-width:460px">
+    <div class="section-header"><div class="section-bar"></div><span class="section-title">Push Notifications</span></div>
+
+    {% if cfg %}
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:20px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <span style="font-size:14px;color:var(--text)">Notifications</span>
+        <div class="toggle-wrap">
+          <button class="toggle {% if cfg.enabled %}on{% endif %}" id="notif-toggle"></button>
+          <span class="toggle-label" id="notif-label">{{ 'Enabled' if cfg.enabled else 'Disabled' }}</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Cooldown Between Alerts (hours)</label>
+        <input type="number" id="cooldown-input" class="form-input" value="{{ cfg.cooldown_hours }}" min="0.5" step="0.5" style="max-width:120px">
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="saveCooldown()">Save Cooldown</button>
+    </div>
+
+    <div class="section-header"><div class="section-bar"></div><span class="section-title">Pushover Credentials</span></div>
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px">
+      <p style="font-size:12px;color:var(--text2);margin-bottom:14px">
+        Sign up free at <a href="https://pushover.net" target="_blank">pushover.net</a>.
+        Create an app token at <a href="https://pushover.net/apps/build" target="_blank">pushover.net/apps/build</a>.
+      </p>
+      <div class="form-group">
+        <label class="form-label">Pushover User Key</label>
+        <input type="text" id="pushover-user-key" class="form-input" placeholder="{{ '••••••• (set)' if cfg.pushover_user_key else 'Your user key' }}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Pushover App Token</label>
+        <input type="text" id="pushover-token" class="form-input" placeholder="{{ '••••••• (set)' if cfg.pushover_api_token else 'Your app token' }}">
+      </div>
+      <button class="btn btn-gold btn-sm" onclick="savePushover()">Save Credentials</button>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{# ════════════════ MODALS ════════════════ #}
+
+{# Add Set #}
+<div class="modal-backdrop" id="modal-add-set">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('modal-add-set')">✕</button>
+    <div class="modal-title">Add Set</div>
+    <form onsubmit="submitSet(event)">
+      <div class="form-group"><label class="form-label">Name (English) *</label><input name="name_en" class="form-input" required></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Name (Japanese)</label><input name="name_jp" class="form-input"></div>
+        <div class="form-group"><label class="form-label">Set Code</label><input name="set_code" class="form-input" placeholder="e.g. SV9"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Series</label><input name="series" class="form-input" placeholder="e.g. Scarlet &amp; Violet"></div>
+        <div class="form-group"><label class="form-label">Release Date</label><input name="release_date" class="form-input" placeholder="YYYY-MM-DD"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Image URL</label><input name="image_url" class="form-input" type="url" placeholder="https://…"></div>
+      <div class="form-group">
+        <label class="form-label">Language</label>
+        <select name="is_japanese" class="form-select">
+          <option value="true">Japanese</option>
+          <option value="false">English</option>
+        </select>
+      </div>
+      <button type="submit" class="btn btn-gold" style="width:100%">Add Set</button>
+    </form>
+  </div>
+</div>
+
+{# Add Product #}
+<div class="modal-backdrop" id="modal-add-product">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('modal-add-product')">✕</button>
+    <div class="modal-title">Add Product</div>
+    <form onsubmit="submitProduct(event)">
+      <div class="form-group"><label class="form-label">Name (English) *</label><input name="name_en" class="form-input" required></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Name (Japanese)</label><input name="name_jp" class="form-input"></div>
+        <div class="form-group">
+          <label class="form-label">Set</label>
+          <select name="set_id" class="form-select">
+            <option value="">— None —</option>
+            {% for s in sets %}<option value="{{ s.id }}">{{ s.name_en }}</option>{% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Product Type *</label>
+          <select name="product_type" class="form-select">
+            <option value="booster_pack">Booster Pack</option>
+            <option value="booster_box">Booster Box</option>
+            <option value="special_box">Special Box</option>
+            <option value="etb">Elite Trainer Box</option>
+            <option value="gift_set">Gift Set</option>
+            <option value="promo">Promo Bundle</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">MSRP (JPY)</label>
+          <input name="msrp_jpy" class="form-input" type="number" step="1" placeholder="e.g. 6000">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">MSRP (USD)</label><input name="msrp_usd" class="form-input" type="number" step="0.01" placeholder="e.g. 39.99"></div>
+        <div class="form-group"><label class="form-label">Image URL</label><input name="image_url" class="form-input" type="url" placeholder="https://…"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Notes</label><textarea name="notes" class="form-textarea" rows="2"></textarea></div>
+      <button type="submit" class="btn btn-gold" style="width:100%">Add Product</button>
+    </form>
+  </div>
+</div>
+
+{# Add Card #}
+<div class="modal-backdrop" id="modal-add-card">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('modal-add-card')">✕</button>
+    <div class="modal-title">Add Card</div>
+    <form onsubmit="submitCard(event)">
+      <div class="form-group"><label class="form-label">Name (English) *</label><input name="name_en" class="form-input" required placeholder="e.g. Charizard ex"></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Name (Japanese)</label><input name="name_jp" class="form-input" placeholder="e.g. リザードンex"></div>
+        <div class="form-group">
+          <label class="form-label">Set</label>
+          <select name="set_id" class="form-select">
+            <option value="">— None —</option>
+            {% for s in sets %}<option value="{{ s.id }}">{{ s.name_en }}</option>{% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Card Number</label><input name="card_number" class="form-input" placeholder="e.g. 006/165"></div>
+        <div class="form-group"><label class="form-label">Rarity</label><input name="rarity" class="form-input" placeholder="e.g. Double Rare"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Image URL</label><input name="image_url" class="form-input" type="url" placeholder="https://…"></div>
+        <div class="form-group">
+          <label class="form-label">Language</label>
+          <select name="is_japanese" class="form-select">
+            <option value="true">Japanese</option>
+            <option value="false">English</option>
+          </select>
+        </div>
+      </div>
+      <button type="submit" class="btn btn-gold" style="width:100%">Add Card</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── Tab switching ──────────────────────────────────────────
+document.getElementById('admin-tabs').addEventListener('click', e => {
+  const btn = e.target.closest('.filter-tab');
+  if (!btn) return;
+  document.querySelectorAll('#admin-tabs .filter-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.admin-tab').forEach(t => t.style.display = 'none');
+  const tab = document.getElementById('tab-' + btn.dataset.tab);
+  if (tab) { tab.style.display = ''; }
+  if (btn.dataset.tab === 'products') loadProducts();
+  if (btn.dataset.tab === 'cards') loadCards();
+});
+
+// ── Load products dynamically ──────────────────────────────
+async function loadProducts() {
+  const r = await fetch('/api/prices/history/product/0').catch(() => null);
+  // Use admin sets endpoint to fetch products per set
+  const resp = await fetch('/api/admin/notifications').catch(() => null); // just to check auth
+  // Simplified: fetch via a generic endpoint
+  const container = document.getElementById('products-list');
+  try {
+    const res = await fetch('/api/search/index');
+    const data = await res.json();
+    const products = data.filter(d => d.type === 'product');
+    if (!products.length) { container.innerHTML = '<div class="empty-state" style="padding:30px"><div class="empty-text">No products yet. Use "+ Add Product" above.</div></div>'; return; }
+    container.innerHTML = `<div class="table-wrap"><table class="data-table"><thead><tr><th>Name</th><th>JP</th><th>Type</th><th>Set</th><th></th></tr></thead><tbody>
+      ${products.map(p => `<tr>
+        <td class="td-name">${p.name_en}</td>
+        <td class="td-dim" style="font-size:12px">${p.name_jp || '—'}</td>
+        <td><span class="badge badge-box">${(p.product_type||'').replace('_',' ')}</span></td>
+        <td class="td-dim" style="font-size:12px">${p.set_name || '—'}</td>
+        <td><button class="btn btn-danger btn-sm btn-icon" onclick="deleteProduct(${p.id}, this)">✕</button></td>
+      </tr>`).join('')}
+    </tbody></table></div>`;
+  } catch { container.innerHTML = '<div class="empty-state" style="padding:30px"><div class="empty-text">Error loading products</div></div>'; }
+}
+
+async function loadCards() {
+  const container = document.getElementById('cards-list');
+  try {
+    const res = await fetch('/api/search/index');
+    const data = await res.json();
+    const cards = data.filter(d => d.type === 'card');
+    if (!cards.length) { container.innerHTML = '<div class="empty-state" style="padding:30px"><div class="empty-text">No cards yet. Use "+ Add Card" above.</div></div>'; return; }
+    container.innerHTML = `<div class="table-wrap"><table class="data-table"><thead><tr><th>Name</th><th>JP</th><th>Set</th><th>Rarity</th><th></th></tr></thead><tbody>
+      ${cards.map(c => `<tr>
+        <td class="td-name">${c.name_en}</td>
+        <td class="td-dim" style="font-size:12px">${c.name_jp || '—'}</td>
+        <td class="td-dim" style="font-size:12px">${c.set_name || '—'}</td>
+        <td class="td-dim" style="font-size:12px">${c.rarity || '—'}</td>
+        <td><button class="btn btn-danger btn-sm btn-icon" onclick="deleteCard(${c.id}, this)">✕</button></td>
+      </tr>`).join('')}
+    </tbody></table></div>`;
+  } catch { container.innerHTML = '<div class="empty-state" style="padding:30px"><div class="empty-text">Error loading cards</div></div>'; }
+}
+
+// ── Form submissions ───────────────────────────────────────
+async function submitSet(e) {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const body = Object.fromEntries(fd.entries());
+  body.is_japanese = body.is_japanese === 'true';
+  const r = await fetch('/api/admin/sets', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+  if (r.ok) { closeModal('modal-add-set'); location.reload(); }
+  else { alert('Error: ' + JSON.stringify(await r.json())); }
+}
+
+async function submitProduct(e) {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const body = Object.fromEntries(fd.entries());
+  if (body.set_id) body.set_id = parseInt(body.set_id) || null;
+  if (body.msrp_jpy) body.msrp_jpy = parseFloat(body.msrp_jpy);
+  if (body.msrp_usd) body.msrp_usd = parseFloat(body.msrp_usd);
+  const r = await fetch('/api/admin/products', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+  if (r.ok) { closeModal('modal-add-product'); await loadProducts(); }
+  else { alert('Error: ' + JSON.stringify(await r.json())); }
+}
+
+async function submitCard(e) {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const body = Object.fromEntries(fd.entries());
+  body.is_japanese = body.is_japanese === 'true';
+  if (body.set_id) body.set_id = parseInt(body.set_id) || null;
+  const r = await fetch('/api/admin/cards', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+  if (r.ok) { closeModal('modal-add-card'); await loadCards(); }
+  else { alert('Error: ' + JSON.stringify(await r.json())); }
+}
+
+// ── Deletes ────────────────────────────────────────────────
+async function deleteSet(id, btn) {
+  if (!confirm('Delete this set and all its products/cards?')) return;
+  const r = await fetch(`/api/admin/sets/${id}`, { method:'DELETE' });
+  if (r.ok) btn.closest('tr').remove();
+  else alert('Error deleting set');
+}
+async function deleteProduct(id, btn) {
+  if (!confirm('Delete this product?')) return;
+  const r = await fetch(`/api/admin/products/${id}`, { method:'DELETE' });
+  if (r.ok) btn.closest('tr').remove();
+  else alert('Error deleting product');
+}
+async function deleteCard(id, btn) {
+  if (!confirm('Delete this card?')) return;
+  const r = await fetch(`/api/admin/cards/${id}`, { method:'DELETE' });
+  if (r.ok) btn.closest('tr').remove();
+  else alert('Error deleting card');
+}
+
+// ── Notifications ──────────────────────────────────────────
+const notifToggle = document.getElementById('notif-toggle');
+const notifLabel  = document.getElementById('notif-label');
+if (notifToggle) {
+  notifToggle.addEventListener('click', async () => {
+    const isOn = notifToggle.classList.contains('on');
+    notifToggle.classList.toggle('on', !isOn);
+    if (notifLabel) notifLabel.textContent = !isOn ? 'Enabled' : 'Disabled';
+    await fetch('/api/admin/notifications', {
+      method:'PATCH', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ enabled: !isOn })
+    });
+  });
+}
+
+async function saveCooldown() {
+  const v = parseFloat(document.getElementById('cooldown-input').value);
+  if (isNaN(v)) return;
+  const r = await fetch('/api/admin/notifications', {
+    method:'PATCH', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ cooldown_hours: v })
+  });
+  if (r.ok) alert('Cooldown saved!');
+}
+
+async function savePushover() {
+  const user_key = document.getElementById('pushover-user-key').value.trim();
+  const token    = document.getElementById('pushover-token').value.trim();
+  if (!user_key && !token) return;
+  const body = {};
+  if (user_key) body.pushover_user_key = user_key;
+  if (token) body.pushover_api_token = token;
+  const r = await fetch('/api/admin/notifications', {
+    method:'PATCH', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(body)
+  });
+  if (r.ok) alert('Pushover credentials saved!');
+  else alert('Error saving credentials');
+}
+</script>
+{% endblock %}

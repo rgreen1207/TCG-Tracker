@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}Watchlist · PkTracker{% endblock %}
+{% block breadcrumb %}Watchlist{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Watchlist</h1>
+  <p class="page-sub">{{ items|length }} item{{ 's' if items|length != 1 }} · Push alert when price hits your target</p>
+</div>
+
+{# ── Active deals banner ── #}
+{% set deals = items | selectattr("is_deal") | list %}
+{% if deals %}
+<div class="deal-banner">
+  <span style="font-size:18px">🔔</span>
+  <span class="deal-banner-title">{{ deals|length }} WATCHLIST DEAL{{ 'S' if deals|length > 1 }} NOW!</span>
+  {% for d in deals %}
+    <span class="deal-pill">{{ d.name_en }} · ${{ "%.2f"|format(d.current_usd) }}</span>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if items %}
+<div class="table-wrap">
+  <table class="data-table">
+    <thead><tr>
+      <th>Item</th>
+      <th>JP Name</th>
+      <th>Current Price</th>
+      <th>Your Target</th>
+      <th>Gap</th>
+      <th>Added</th>
+      <th>Notes</th>
+      {% if admin %}<th></th>{% endif %}
+    </tr></thead>
+    <tbody>
+      {% for w in items %}
+      {% set gap = (w.current_usd - w.target_price_usd) if (w.current_usd and w.target_price_usd) else none %}
+      <tr style="{% if w.is_deal %}background:rgba(0,230,118,.03){% endif %}">
+        <td class="td-name">
+          {% if w.image_url %}
+            <img src="{{ w.image_url }}" alt="" style="width:28px;height:28px;object-fit:contain;border-radius:4px;vertical-align:middle;margin-right:8px">
+          {% endif %}
+          {{ w.name_en }}
+          {% if w.is_deal %}<span class="badge badge-deal" style="margin-left:6px">DEAL!</span>{% endif %}
+        </td>
+        <td class="td-dim" style="font-size:12px">{{ w.name_jp or '—' }}</td>
+        <td>
+          {% if w.current_usd %}
+            <div class="td-price {% if w.is_deal %}td-price-green{% endif %}">${{ "%.2f"|format(w.current_usd) }}</div>
+            <div class="td-dim" style="font-size:11px;font-family:var(--font-mono)">¥{{ "{:,.0f}".format(w.current_jpy) if w.current_jpy else '—' }}</div>
+            {% if w.market_url %}<a href="{{ w.market_url }}" target="_blank" style="font-size:10px;color:var(--cyan)">↗ view</a>{% endif %}
+          {% else %}
+            <span class="td-dim">No data</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if w.target_price_usd %}
+            <span class="td-price gold">${{ "%.2f"|format(w.target_price_usd) }}</span>
+            <div class="td-dim" style="font-size:11px;font-family:var(--font-mono)">¥{{ "{:,.0f}".format(w.target_price_jpy) if w.target_price_jpy else '—' }}</div>
+          {% else %}
+            <span class="td-dim">Any price</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if gap is not none %}
+            <span class="mono {% if gap <= 0 %}green{% else %}red{% endif %}">
+              {% if gap <= 0 %}✓ ${{ "%.2f"|format(gap|abs) }} under{% else %}${{ "%.2f"|format(gap) }} away{% endif %}
+            </span>
+          {% else %}—{% endif %}
+        </td>
+        <td class="td-dim" style="font-size:12px">{{ w.added_at.strftime('%Y-%m-%d') if w.added_at else '—' }}</td>
+        <td class="td-dim" style="font-size:12px;max-width:120px">{{ w.notes or '—' }}</td>
+        {% if admin %}
+        <td>
+          <button class="btn btn-danger btn-sm btn-icon" onclick="removeWatch({{ w.id }}, this)" title="Remove">✕</button>
+        </td>
+        {% endif %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% else %}
+<div class="empty-state">
+  <div class="empty-icon">◌</div>
+  <div class="empty-text">
+    Your watchlist is empty.<br>
+    Add items from <a href="/sets">Sets</a> or <a href="/search">Search</a> — you'll get a push notification when the price drops to your target.
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function removeWatch(id, btn) {
+  if (!confirm('Remove from watchlist?')) return;
+  const r = await fetch(`/api/watchlist/${id}`, { method: 'DELETE' });
+  if (r.ok) btn.closest('tr').remove();
+  else alert('Error removing item');
+}
+</script>
+{% endblock %}

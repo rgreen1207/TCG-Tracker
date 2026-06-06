@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+{% block title %}Collection · PkTracker{% endblock %}
+{% block breadcrumb %}Collection{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px">
+    <div>
+      <h1 class="page-title">My Collection</h1>
+      <p class="page-sub">{{ items|length }} item{{ 's' if items|length != 1 }} · Current market value</p>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <a href="/collection/export/csv" class="btn btn-sm" style="border-color:var(--border);color:var(--text2)">↓ CSV</a>
+      <a href="/collection/export/json" class="btn btn-sm" style="border-color:var(--border);color:var(--text2)">↓ JSON</a>
+    </div>
+  </div>
+</div>
+
+{# ── Portfolio summary bar ── #}
+{% if items %}
+<div class="portfolio-bar">
+  <div class="portfolio-stat">
+    <div class="portfolio-label">Total Portfolio Value</div>
+    <div class="portfolio-value highlight">${{ "{:,.2f}".format(portfolio_usd) }}</div>
+  </div>
+  <div class="portfolio-divider"></div>
+  <div class="portfolio-stat">
+    <div class="portfolio-label">In JPY</div>
+    <div class="portfolio-value">¥{{ "{:,.0f}".format(portfolio_jpy) }}</div>
+  </div>
+  <div class="portfolio-divider"></div>
+  <div class="portfolio-stat">
+    <div class="portfolio-label">Items Tracked</div>
+    <div class="portfolio-value">{{ items|length }}</div>
+  </div>
+  <div class="portfolio-divider"></div>
+  <div class="portfolio-stat">
+    <div class="portfolio-label">Graded</div>
+    <div class="portfolio-value">{{ items | selectattr("status", "eq", "graded") | list | length }}</div>
+  </div>
+  <div class="portfolio-divider"></div>
+  <div class="portfolio-stat">
+    <div class="portfolio-label">FX Rate</div>
+    <div class="portfolio-value mono" style="font-size:14px">¥{{ "{:,.0f}".format(fx) }} / $1</div>
+  </div>
+</div>
+{% endif %}
+
+{# ── Filter tabs ── #}
+<div class="filter-bar" id="col-filter">
+  <button class="filter-tab active" data-filter="all">All</button>
+  <button class="filter-tab" data-filter="raw">Raw</button>
+  <button class="filter-tab" data-filter="graded">Graded</button>
+  <button class="filter-tab" data-filter="psa">PSA</button>
+  <button class="filter-tab" data-filter="tag">TAG</button>
+  <button class="filter-tab" data-filter="card">Cards</button>
+  <button class="filter-tab" data-filter="product">Products</button>
+</div>
+
+{% if items %}
+<div class="table-wrap">
+  <table class="data-table" id="collection-table">
+    <thead><tr>
+      <th>Item</th>
+      <th>JP Name</th>
+      <th>Type</th>
+      <th>Status</th>
+      <th>Market Price</th>
+      <th>MSRP</th>
+      <th>Qty</th>
+      <th>Total Value</th>
+      <th>Acquired</th>
+      {% if admin %}<th></th>{% endif %}
+    </tr></thead>
+    <tbody>
+      {% for item in items %}
+      <tr data-filter-status="{{ item.status }}" data-filter-grader="{{ item.grader | lower if item.grader else '' }}" data-filter-type="{{ item.item_type }}">
+        <td class="td-name">
+          {% if item.image_url %}
+            <img src="{{ item.image_url }}" alt="" style="width:28px;height:28px;object-fit:contain;border-radius:4px;vertical-align:middle;margin-right:8px">
+          {% endif %}
+          {{ item.name_en }}
+          {% if item.notes %}<div style="font-size:10px;color:var(--text3);margin-top:2px">{{ item.notes }}</div>{% endif %}
+        </td>
+        <td class="td-dim" style="font-size:12px">{{ item.name_jp or '—' }}</td>
+        <td><span class="badge {% if item.item_type == 'card' %}badge-pack{% else %}badge-box{% endif %}">{{ item.item_type | title }}</span></td>
+        <td>
+          {% if item.status == 'graded' and item.grade_label %}
+            <span class="badge {% if item.grader == 'PSA' %}badge-psa{% else %}badge-tag{% endif %}">{{ item.grade_label }}</span>
+          {% else %}
+            <span class="badge badge-raw">Raw</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if item.market_usd %}
+            <div class="td-price-green">${{ "%.2f"|format(item.market_usd) }}</div>
+            <div class="td-dim" style="font-size:11px;font-family:var(--font-mono)">¥{{ "{:,.0f}".format(item.market_jpy) }}</div>
+            {% if item.market_url %}
+              <a href="{{ item.market_url }}" target="_blank" style="font-size:10px;color:var(--cyan)">↗ source</a>
+            {% endif %}
+          {% else %}
+            <span class="td-dim">—</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if item.msrp_usd %}
+            <div class="td-mono" style="font-size:12px">${{ "%.2f"|format(item.msrp_usd) }}</div>
+            {% if item.msrp_jpy %}<div class="td-dim" style="font-size:10px;font-family:var(--font-mono)">¥{{ "{:,.0f}".format(item.msrp_jpy) }}</div>{% endif %}
+          {% else %}—{% endif %}
+        </td>
+        <td class="td-mono">{{ item.quantity }}</td>
+        <td>
+          {% if item.total_value_usd %}
+            <span class="td-price gold">${{ "{:,.2f}".format(item.total_value_usd) }}</span>
+          {% else %}—{% endif %}
+        </td>
+        <td class="td-dim" style="font-size:12px">
+          {{ item.acquired_date or '—' }}
+          {% if item.acquired_price_usd %}
+            <div style="font-size:10px;font-family:var(--font-mono)">@ ${{ "%.2f"|format(item.acquired_price_usd) }}</div>
+          {% endif %}
+        </td>
+        {% if admin %}
+        <td>
+          <button class="btn btn-danger btn-sm btn-icon" title="Remove" onclick="deleteCollectionItem({{ item.id }}, this)">✕</button>
+        </td>
+        {% endif %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% else %}
+<div class="empty-state">
+  <div class="empty-icon">◌</div>
+  <div class="empty-text">
+    Your collection is empty.<br>
+    Browse <a href="/sets">Sets</a> or <a href="/search">Search</a> for cards to add.
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Filter tabs
+document.getElementById('col-filter')?.addEventListener('click', e => {
+  const btn = e.target.closest('.filter-tab');
+  if (!btn) return;
+  document.querySelectorAll('#col-filter .filter-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const f = btn.dataset.filter;
+  document.querySelectorAll('#collection-table tbody tr').forEach(row => {
+    const match =
+      f === 'all' ||
+      (f === 'raw'     && row.dataset.filterStatus === 'raw') ||
+      (f === 'graded'  && row.dataset.filterStatus === 'graded') ||
+      (f === 'psa'     && row.dataset.filterGrader === 'psa') ||
+      (f === 'tag'     && row.dataset.filterGrader === 'tag') ||
+      (f === 'card'    && row.dataset.filterType === 'card') ||
+      (f === 'product' && row.dataset.filterType === 'product');
+    row.style.display = match ? '' : 'none';
+  });
+});
+
+async function deleteCollectionItem(id, btn) {
+  if (!confirm('Remove this item from your collection?')) return;
+  const r = await fetch(`/api/collection/${id}`, { method: 'DELETE' });
+  if (r.ok) { btn.closest('tr').remove(); }
+  else { alert('Error removing item'); }
+}
+</script>
+{% endblock %}

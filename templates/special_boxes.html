@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block title %}Special Boxes · PkTracker{% endblock %}
+{% block breadcrumb %}Special Boxes{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Special Boxes</h1>
+  <p class="page-sub">Elite Trainer Boxes · Gift Sets · Promo Bundles · Special Collections</p>
+</div>
+
+{# ── Type filter tabs ── #}
+<div class="filter-bar" id="type-filter">
+  <button class="filter-tab active" data-type="all">All ({{ products|length }})</button>
+  <button class="filter-tab" data-type="special_box">Special Box</button>
+  <button class="filter-tab" data-type="etb">ETB</button>
+  <button class="filter-tab" data-type="gift_set">Gift Set</button>
+  <button class="filter-tab" data-type="promo">Promo</button>
+</div>
+
+{% if products %}
+<div class="price-grid" id="specials-grid">
+  {% for p in products %}
+  {% set is_deal = p.msrp_diff is not none and p.msrp_diff < 0 %}
+  <div class="price-card {% if is_deal %}deal{% endif %}" data-type="{{ p.product_type }}">
+    <div class="card-shine"></div>
+    <div class="card-top">
+      {% if p.image_url %}
+        <img src="{{ p.image_url }}" alt="" class="card-img">
+      {% else %}
+        <div class="card-img-placeholder">🎁</div>
+      {% endif %}
+      <div class="card-meta">
+        <div class="card-name">{{ p.name_en }}</div>
+        {% if p.name_jp %}<div class="card-name-jp">{{ p.name_jp }}</div>{% endif %}
+        <div class="card-badges" style="margin-top:4px">
+          {% if p.product_type == 'etb' %}<span class="badge badge-etb">ETB</span>
+          {% elif p.product_type == 'gift_set' %}<span class="badge badge-special">Gift Set</span>
+          {% elif p.product_type == 'promo' %}<span class="badge badge-special">Promo</span>
+          {% else %}<span class="badge badge-special">Special Box</span>{% endif %}
+          {% if is_deal %}<span class="badge badge-deal">↓ Below MSRP</span>{% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="card-prices">
+      {% if p.lowest_usd %}
+        <div class="price-main">${{ "%.2f"|format(p.lowest_usd) }}</div>
+        <div class="price-secondary">¥{{ "{:,.0f}".format(p.lowest_jpy) if p.lowest_jpy else '—' }}</div>
+        {% if p.msrp_diff is not none %}
+          <div class="price-msrp-diff {% if p.msrp_diff < 0 %}msrp-diff-neg{% elif p.msrp_diff > 0 %}msrp-diff-pos{% else %}msrp-diff-zero{% endif %}">
+            {% if p.msrp_diff < 0 %}▼ ${{ "%.2f"|format(p.msrp_diff|abs) }} under MSRP
+            {% elif p.msrp_diff > 0 %}▲ +${{ "%.2f"|format(p.msrp_diff) }} over MSRP
+            {% else %}= MSRP{% endif %}
+          </div>
+        {% endif %}
+      {% else %}
+        <div class="price-main" style="color:var(--text3)">—</div>
+        <div class="price-secondary">No price data yet</div>
+      {% endif %}
+      {% if p.msrp_usd %}
+        <div style="font-size:10px;color:var(--text3);margin-top:3px">MSRP ${{ "%.2f"|format(p.msrp_usd) }}</div>
+      {% endif %}
+    </div>
+
+    <div class="sparkline-wrap">
+      <canvas id="spark-sb{{ p.id }}" height="40"></canvas>
+    </div>
+    <hr class="card-divider">
+    <div class="card-footer">
+      <span class="card-source">{{ p.product_type | replace('_',' ') | title }}</span>
+      <div style="display:flex;gap:6px">
+        {% if p.url %}<a href="{{ p.url }}" target="_blank" rel="noopener" class="btn btn-primary btn-sm">Buy ↗</a>{% endif %}
+        {% if admin %}
+          <button class="btn btn-sm btn-gold" onclick="quickAdd('product',{{ p.id }},'{{ p.name_en | replace("'","") }}')">+ Own</button>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{% else %}
+<div class="empty-state">
+  <div class="empty-icon">🎁</div>
+  <div class="empty-text">
+    No special boxes tracked yet.
+    {% if admin %}<br><a href="/admin" class="btn btn-gold" style="margin-top:14px;display:inline-flex">+ Add Product</a>{% endif %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // Sparklines
+  {% for p in products %}renderSparkline('spark-sb{{ p.id }}', 'product', {{ p.id }});{% endfor %}
+
+  // Type filter
+  document.getElementById('type-filter')?.addEventListener('click', e => {
+    const btn = e.target.closest('.filter-tab');
+    if (!btn) return;
+    document.querySelectorAll('#type-filter .filter-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const type = btn.dataset.type;
+    document.querySelectorAll('#specials-grid .price-card').forEach(card => {
+      card.style.display = (type === 'all' || card.dataset.type === type) ? '' : 'none';
+    });
+  });
+});
+
+function quickAdd(type, id, name) {
+  // Simple inline — redirect to set_detail modal pattern if needed
+  const qty = prompt(`How many "${name}" do you own?`, '1');
+  if (!qty) return;
+  fetch('/api/collection', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ item_type: type, item_id: id, status: 'raw', quantity: parseInt(qty) })
+  }).then(r => r.ok ? alert('Added!') : alert('Error adding to collection'));
+}
+</script>
+{% endblock %}
