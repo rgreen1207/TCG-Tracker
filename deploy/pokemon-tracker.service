@@ -1,0 +1,25 @@
+[Unit]
+Description=Pokemon Price Tracker
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/pokemon-tracker
+Environment=PATH=/home/pi/pokemon-tracker/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin
+ExecStart=/home/pi/pokemon-tracker/venv/bin/uvicorn main:app --host 127.0.0.1 --port 8888 --workers 1
+Restart=on-failure
+RestartSec=5s
+
+# Hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/home/pi/pokemon-tracker/data /home/pi/pokemon-tracker/logs
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=pokemon-tracker
+
+[Install]
+WantedBy=multi-user.target
