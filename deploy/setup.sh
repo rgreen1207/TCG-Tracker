@@ -1,25 +1,8 @@
 #!/usr/bin/env bash
-# Push the portable setup.sh fix to GitHub
-# Run from your TCG-Tracker repo directory:
-#   bash push_setup_fix.sh
- 
-set -euo pipefail
- 
-GREEN='\033[0;32m'; NC='\033[0m'
-info() { echo -e "${GREEN}[push]${NC} $*"; }
- 
-# ── Make sure we're in the repo ───────────────────────────────
-[[ -f "main.py" ]] || { echo "Run this from inside your TCG-Tracker repo directory."; exit 1; }
- 
-info "Downloading updated deploy files from the fixed version…"
- 
-# Write the new portable setup.sh directly
-cat > deploy/setup.sh << 'SETUPEOF'
-#!/usr/bin/env bash
 # =============================================================================
 # TCG Tracker — Raspberry Pi Setup Script
 # Portable: works for any username, any clone location, any Pi.
-# Usage: bash deploy/setup.sh   (run from anywhere inside the repo)
+# Usage: bash deploy/setup.sh   (from anywhere inside the repo)
 # =============================================================================
 set -euo pipefail
  
@@ -43,7 +26,9 @@ error() { echo -e "${RED}[ERROR]${NC} $*"; exit 1; }
  
 # ── Preflight checks ──────────────────────────────────────────
 [[ "$(id -u)" -eq 0 ]] && error "Do not run as root. Run as your normal user (e.g. ryan, pi, ubuntu)."
-[[ -f "$REPO_DIR/main.py" ]]          || error "Cannot find main.py in $REPO_DIR — run this script from inside the cloned repo."
+ 
+# Verify we're actually inside the repo
+[[ -f "$REPO_DIR/main.py" ]] || error "Cannot find main.py in $REPO_DIR — make sure you run this from inside the cloned repo."
 [[ -f "$REPO_DIR/requirements.txt" ]] || error "Cannot find requirements.txt in $REPO_DIR."
  
 info "TCG Tracker setup starting…"
@@ -118,6 +103,7 @@ info "Systemd service installed and enabled."
 info "Configuring Nginx…"
 PUBLIC_IP=$(curl -sf --max-time 5 https://api.ipify.org || echo "YOUR_PUBLIC_IP")
  
+# Build the self-signed cert path
 SSL_DIR="/etc/ssl/$SERVICE_NAME"
 SSL_CERT="$SSL_DIR/selfsigned.crt"
 SSL_KEY="$SSL_DIR/selfsigned.key"
@@ -185,16 +171,18 @@ server {
         proxy_read_timeout 60s;
     }
  
+    # Static files served directly by Nginx (no hardcoded user path)
     location /static/ {
         alias $REPO_DIR/static/;
         expires 7d;
         add_header Cache-Control "public, immutable";
     }
  
-    location ~ /\.    { deny all; }
-    location ~ /\.env { deny all; }
-    location ~ /data/ { deny all; }
-    location ~ /logs/ { deny all; }
+    # Block sensitive paths
+    location ~ /\.          { deny all; }
+    location ~ /\.env       { deny all; }
+    location ~ /data/       { deny all; }
+    location ~ /logs/       { deny all; }
 }
 NGINXEOF
  
@@ -227,80 +215,91 @@ echo "  Repo:         $REPO_DIR"
 echo "  Running as:   $CURRENT_USER"
 echo "  Service name: $SERVICE_NAME"
 echo ""
-echo "  Next steps:"
-echo "  1. Edit credentials:  nano $REPO_DIR/.env"
-echo "  2. Start service:     sudo systemctl start $SERVICE_NAME"
-echo "  3. View live logs:    sudo journalctl -u $SERVICE_NAME -f"
-echo "  4. Check status:      sudo systemctl status $SERVICE_NAME"
+echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${YELLOW}  Step 1 — Edit your credentials${NC}"
+echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""
-echo "  Access from your network:  https://$LOCAL_IP"
-echo "  Access from the internet:  https://$PUBLIC_IP  (after port-forwarding 443)"
+echo "    nano $REPO_DIR/.env"
 echo ""
-echo "  To upgrade to a real HTTPS cert once you have a domain:"
+echo "  Fill in the following values:"
+echo ""
+echo "  ADMIN_PASSWORD        → Password to log into the admin panel"
+echo "  SECRET_KEY            → Already auto-generated ✓"
+echo ""
+echo "  EBAY_APP_ID           → From https://developer.ebay.com"
+echo "  EBAY_CLIENT_SECRET    → From https://developer.ebay.com"
+echo "    (Create a free account → My Apps → Create App → Browse API)"
+echo ""
+echo "  PRICECHARTING_API_KEY → From https://www.pricecharting.com/api"
+echo "    (Free signup, no credit card)"
+echo ""
+echo "  POKEMONTCG_API_KEY    → From https://pokemontcg.io"
+echo "    (Free, optional — raises rate limits)"
+echo ""
+echo "  PUSHOVER_USER_KEY     → From https://pushover.net (your user key)"
+echo "  PUSHOVER_API_TOKEN    → From https://pushover.net/apps/build"
+echo "    (Free account + one-time \$5 app licence for iOS/Android)"
+echo ""
+echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${YELLOW}  Step 2 — Start the service${NC}"
+echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo ""
+echo "    sudo systemctl start $SERVICE_NAME"
+echo "    sudo journalctl -u $SERVICE_NAME -f    # live logs"
+echo "    sudo systemctl status $SERVICE_NAME    # quick status"
+echo ""
+echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${YELLOW}  Step 3 — Access the tracker${NC}"
+echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo ""
+echo "  From any device on your home network:"
+echo "    https://$LOCAL_IP"
+echo ""
+echo "  From the internet (after port-forwarding — see Step 4):"
+echo "    https://$PUBLIC_IP"
+echo ""
+echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${YELLOW}  Step 4 — Port-forwarding (for internet access)${NC}"
+echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo ""
+echo "  Log into your router (usually http://192.168.1.1 or http://192.168.0.1)"
+echo "  Look for: NAT / Port Forwarding / Virtual Servers / Applications"
+echo ""
+echo "  Add two rules:"
+echo ""
+echo "  ┌─────────────────┬──────────────────┬───────────┬──────────┐"
+echo "  │ External Port   │ Internal IP      │ Int. Port │ Protocol │"
+echo "  ├─────────────────┼──────────────────┼───────────┼──────────┤"
+echo "  │ 443             │ $LOCAL_IP        │ 443       │ TCP      │"
+echo "  │ 80              │ $LOCAL_IP        │ 80        │ TCP      │"
+echo "  └─────────────────┴──────────────────┴───────────┴──────────┘"
+echo ""
+echo "  Also assign your Pi a static local IP so the rule doesn't break:"
+echo "  → In your router: DHCP Reservations / Static Lease"
+echo "    Bind MAC address of this Pi to $LOCAL_IP"
+echo ""
+echo "  Router-specific guides:"
+echo "    https://portforward.com  (covers 99% of consumer routers by model)"
+echo ""
+echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${YELLOW}  Step 5 — Optional: free HTTPS domain (recommended)${NC}"
+echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo ""
+echo "  A free subdomain removes the browser SSL warning and gives you"
+echo "  a memorable URL instead of a bare IP address."
+echo ""
+echo "  Free dynamic DNS options:"
+echo "    DuckDNS  → https://www.duckdns.org  (free, simple, Raspberry Pi friendly)"
+echo "    No-IP    → https://www.noip.com     (free tier available)"
+echo ""
+echo "  Once your domain points at $PUBLIC_IP, run:"
 echo "    sudo certbot --nginx -d YOUR_DOMAIN"
+echo "  Certbot will auto-renew the cert every 90 days via cron."
 echo ""
-echo "  To deploy on any other Pi in future — just:"
+echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${YELLOW}  Deploy on another Pi any time${NC}"
+echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo ""
 echo "    git clone https://github.com/rgreen1207/TCG-Tracker"
 echo "    cd TCG-Tracker && bash deploy/setup.sh"
-echo ""
-SETUPEOF
- 
-chmod +x deploy/setup.sh
-info "deploy/setup.sh updated."
- 
-# Write the template-only service file
-cat > deploy/pokemon-tracker.service << 'SVCEOF'
-# NOTE: This file is a documentation template only.
-# The actual /etc/systemd/system/tcg-tracker.service is written
-# dynamically by deploy/setup.sh with correct user, paths, and venv
-# for whatever machine you're running on.
-#
-# To install on any Pi:
-#   git clone https://github.com/rgreen1207/TCG-Tracker
-#   cd TCG-Tracker && bash deploy/setup.sh
- 
-[Unit]
-Description=TCG Price Tracker
-After=network.target
- 
-[Service]
-Type=simple
-User=<auto-detected by setup.sh>
-WorkingDirectory=<auto-detected by setup.sh>
-Environment=PATH=<auto-detected by setup.sh>
-ExecStart=<venv>/bin/uvicorn main:app --host 127.0.0.1 --port 8888 --workers 1
-Restart=on-failure
-RestartSec=5s
-NoNewPrivileges=true
-PrivateTmp=true
-ProtectSystem=strict
-StandardOutput=journal
-StandardError=journal
-SyslogIdentifier=tcg-tracker
- 
-[Install]
-WantedBy=multi-user.target
-SVCEOF
- 
-info "deploy/pokemon-tracker.service updated."
- 
-# ── Commit and push ───────────────────────────────────────────
-git add deploy/setup.sh deploy/pokemon-tracker.service
- 
-git commit -m "fix: make setup.sh fully portable (any user, any path, any Pi)
- 
-- Derive REPO_DIR from script location via BASH_SOURCE — no hardcoded paths
-- Derive CURRENT_USER via whoami — no hardcoded 'pi' or 'ryan'
-- Systemd service file written dynamically at install time
-- Nginx config written dynamically — static alias uses live REPO_DIR
-- Service renamed to tcg-tracker for clarity
-- Preflight check verifies main.py exists rather than checking a fixed path
-- Works: git clone <repo> && bash deploy/setup.sh on any machine"
- 
-git push
-info "Pushed to GitHub. On your Pi, run:"
-echo ""
-echo "  cd ~/TCG-Tracker"
-echo "  git pull"
-echo "  bash deploy/setup.sh"
 echo ""
