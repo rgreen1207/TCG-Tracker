@@ -246,4 +246,4 @@ async def _fetch_pokemontcg(keyword: str) -> list[dict]:
         if item.get("price_usd") and not item.get("price_jpy"):
             item["price_jpy"] = round(item["price_usd"] * fx)
     return raw
-  
+ 
