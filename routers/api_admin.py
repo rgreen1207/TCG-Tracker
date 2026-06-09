@@ -84,7 +84,7 @@ async def create_product(body: ProductCreate, db: AsyncSession = Depends(get_db)
 async def update_product(pid: int, body: ProductCreate, db: AsyncSession = Depends(get_db)):
     p = (await db.execute(select(Product).where(Product.id == pid))).scalar_one_or_none()
     if not p:
-        raise HTTPException(404)
+        raise HTTPException(404, "Product not found")
     for k, v in body.model_dump(exclude_none=True).items():
         setattr(p, k, v)
     await db.commit()
@@ -96,7 +96,7 @@ async def update_product(pid: int, body: ProductCreate, db: AsyncSession = Depen
 async def delete_product(pid: int, db: AsyncSession = Depends(get_db)):
     p = (await db.execute(select(Product).where(Product.id == pid))).scalar_one_or_none()
     if not p:
-        raise HTTPException(404)
+        raise HTTPException(404, "Product not found")
     await db.delete(p)
     await db.commit()
     await search_service.rebuild_index()
@@ -129,7 +129,7 @@ async def create_card(body: CardCreate, db: AsyncSession = Depends(get_db)):
 async def update_card(cid: int, body: CardCreate, db: AsyncSession = Depends(get_db)):
     c = (await db.execute(select(Card).where(Card.id == cid))).scalar_one_or_none()
     if not c:
-        raise HTTPException(404)
+        raise HTTPException(404, "Card not found")
     for k, v in body.model_dump(exclude_none=True).items():
         setattr(c, k, v)
     await db.commit()
@@ -141,7 +141,7 @@ async def update_card(cid: int, body: CardCreate, db: AsyncSession = Depends(get
 async def delete_card(cid: int, db: AsyncSession = Depends(get_db)):
     c = (await db.execute(select(Card).where(Card.id == cid))).scalar_one_or_none()
     if not c:
-        raise HTTPException(404)
+        raise HTTPException(404, "Card not found")
     await db.delete(c)
     await db.commit()
     await search_service.rebuild_index()

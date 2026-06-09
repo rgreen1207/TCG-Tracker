@@ -25,7 +25,7 @@ import logging
 from typing import Optional
  
 from config import settings
-from services.fx_service import get_usd_jpy
+from services.fx_service import get_usd_jpy, get_eur_usd
  
 log = logging.getLogger(__name__)
  
@@ -152,6 +152,7 @@ async def collect_prices(
 async def _fetch_tcgdex(keyword: str) -> list[dict]:
     from services.tcgdex_client import search_cards, extract_prices, get_card, card_image_url
     fx = await get_usd_jpy()
+    eur_usd = get_eur_usd()
  
     en_results = await search_cards(keyword, lang="en", limit=5)
     ja_results = await search_cards(keyword, lang="ja", limit=5)
@@ -181,8 +182,7 @@ async def _fetch_tcgdex(keyword: str) -> list[dict]:
                 price_usd = round(float(market), 2)
             elif p["currency"] == "EUR":
                 price_eur = round(float(market), 2)
-                # Use live FX for EUR→USD rather than a hardcoded rate
-                price_usd = round(price_eur / (fx * 0.0065), 2)  # EUR/USD ≈ 1/fx * 1.08 approx
+                price_usd = round(price_eur * eur_usd, 2)
  
             listings.append({
                 "title":          f"{full.get('name', keyword)} ({brief.get('set', {}).get('name', '')})",

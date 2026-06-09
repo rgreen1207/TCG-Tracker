@@ -7,6 +7,7 @@ from auth import (
     verify_password, create_token, check_lockout,
     record_attempt, COOKIE_NAME, require_admin,
 )
+from config import settings
 from database import get_db
 
 router = APIRouter()
@@ -35,7 +36,7 @@ async def login(
     resp = RedirectResponse("/admin", status_code=303)
     resp.set_cookie(
         COOKIE_NAME, token,
-        httponly=True, secure=False,   # set secure=True when behind HTTPS
+        httponly=True, secure=settings.https,
         samesite="strict", max_age=86400,
     )
     return resp

@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from auth import require_admin
 from database import get_db, PriceHistory, Product, Card, AlertLog
 from services.fx_service import get_usd_jpy
 import poller
@@ -116,7 +117,7 @@ async def get_status():
     }
 
 
-@router.post("/poll/trigger")
+@router.post("/poll/trigger", dependencies=[Depends(require_admin)])
 async def trigger_poll():
     import asyncio
     asyncio.create_task(poller.run_price_check())

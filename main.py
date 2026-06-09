@@ -5,15 +5,12 @@ Run: uvicorn main:app --host 0.0.0.0 --port 8888
 from __future__ import annotations
 import logging
 import logging.handlers
-import os
 from contextlib import asynccontextmanager
- 
+from pathlib import Path
+
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
-from slowapi.errors import RateLimitExceeded
- 
+
 from config import settings
 from database import init_db
 from services import search_service, notifier
@@ -21,13 +18,15 @@ from services.source_registry import get_source_status
 import poller
 from routers import pages, api_auth, api_prices, api_collection, api_watchlist, api_admin, api_search
 from routers.api_sources import router as sources_router
- 
+
+BASE_DIR = Path(__file__).parent
+
 # ── Logging ───────────────────────────────────────────────────
-LOG_DIR = os.path.join(os.path.dirname(__file__), "logs")
-os.makedirs(LOG_DIR, exist_ok=True)
+LOG_DIR = BASE_DIR / "logs"
+LOG_DIR.mkdir(exist_ok=True)
 fmt = logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 fh  = logging.handlers.TimedRotatingFileHandler(
-    os.path.join(LOG_DIR, "tracker.log"), when="midnight", backupCount=14
+    LOG_DIR / "tracker.log", when="midnight", backupCount=14
 )
 fh.setFormatter(fmt)
 ch = logging.StreamHandler()
@@ -37,11 +36,8 @@ root.setLevel(logging.INFO)
 root.addHandler(fh)
 root.addHandler(ch)
 log = logging.getLogger(__name__)
- 
-# ── Rate limiter ──────────────────────────────────────────────
-limiter = Limiter(key_func=get_remote_address, default_limits=["200/minute"])
- 
- 
+
+
 # ── Lifespan ──────────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -79,9 +75,6 @@ app = FastAPI(
     lifespan=lifespan,
 )
  
-app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
- 
 # Security headers middleware
 @app.middleware("http")
 async def security_headers(request: Request, call_next):
@@ -92,7 +85,7 @@ async def security_headers(request: Request, call_next):
     response.headers["Referrer-Policy"]        = "strict-origin-when-cross-origin"
     return response
  
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
  
 app.include_router(pages.router)
 app.include_router(api_auth.router)

@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     # Server
     host: str = "0.0.0.0"
     port: int = 8888
+    https: bool = False   # set True in .env when running behind HTTPS (enables secure cookies)
  
     # Security — safe defaults so app boots without .env
     secret_key: str = "dev_secret_change_me"

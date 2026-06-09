@@ -19,7 +19,7 @@
 
     {% if error %}
     <div class="login-error">
-      Incorrect password{% if error == '429' %} — too many attempts, try again in 15 minutes{% endif %}.
+      Incorrect password{% if error == 429 %} — too many attempts, try again in 15 minutes{% endif %}.
     </div>
     {% endif %}
 

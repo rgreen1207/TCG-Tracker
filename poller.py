@@ -151,7 +151,7 @@ def start_scheduler():
         seconds=settings.poll_interval_seconds,
         id="price_check",
         replace_existing=True,
-        next_run_time=datetime.now(),
+        next_run_time=datetime.utcnow(),
     )
     scheduler.add_job(
         get_usd_jpy,

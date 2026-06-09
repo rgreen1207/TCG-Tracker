@@ -18,8 +18,10 @@ from services.fx_service import get_usd_jpy
 from services import search_service
 import poller
  
+from pathlib import Path
+
 router = APIRouter()
-templates = Jinja2Templates(directory="templates")
+templates = Jinja2Templates(directory=Path(__file__).parent.parent / "templates")
  
  
 def _ctx(request: Request, **kwargs):
@@ -223,9 +225,10 @@ async def search_page(
     results = []
     if q:
         results = search_service.fuzzy_search(q, limit=30)
-    index_json = json.dumps(search_service.get_index_json())
+    index_data = search_service.get_index_json()
+    index_json = json.dumps(index_data)
     return templates.TemplateResponse("search.html", _ctx(
-        request, q=q or "", results=results, index_json=index_json
+        request, q=q or "", results=results, index_json=index_json, index_count=len(index_data)
     ))
  
  
