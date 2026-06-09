@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from auth import require_admin
 from database import get_db, PriceHistory, Product, Card, AlertLog
-from services.fx_service import get_usd_jpy
+from services.fx_service import get_usd_jpy, get_eur_usd
 import poller
 
 router = APIRouter(prefix="/api/prices")
@@ -15,7 +15,7 @@ router = APIRouter(prefix="/api/prices")
 @router.get("/lowest/{item_type}/{item_id}")
 async def get_lowest(
     item_type: str,
-    item_id: int,
+    item_id: str,
     hours: int = 24,
     db: AsyncSession = Depends(get_db),
 ):
@@ -54,7 +54,7 @@ async def get_lowest(
 @router.get("/history/{item_type}/{item_id}")
 async def get_history(
     item_type: str,
-    item_id: int,
+    item_id: str,
     limit: int = Query(200, le=1000),
     db: AsyncSession = Depends(get_db),
 ):
@@ -81,7 +81,7 @@ async def get_history(
 @router.get("/sparkline/{item_type}/{item_id}")
 async def sparkline(
     item_type: str,
-    item_id: int,
+    item_id: str,
     days: int = 30,
     db: AsyncSession = Depends(get_db),
 ):
@@ -115,6 +115,12 @@ async def get_status():
         "next_run":  job.next_run_time if job else None,
         "last_error": poller.state.get("last_error"),
     }
+
+
+@router.get("/fx")
+async def get_fx():
+    usd_jpy = await get_usd_jpy()
+    return {"usd_jpy": usd_jpy, "eur_usd": get_eur_usd()}
 
 
 @router.post("/poll/trigger", dependencies=[Depends(require_admin)])

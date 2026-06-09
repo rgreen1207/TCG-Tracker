@@ -34,12 +34,20 @@ async def create_set(body: SetCreate, db: AsyncSession = Depends(get_db)):
     return {"id": s.id}
 
 
-@router.patch("/sets/{set_id}")
-async def update_set(set_id: int, body: SetCreate, db: AsyncSession = Depends(get_db)):
+@router.get("/sets/{set_id}")
+async def get_set(set_id: str, db: AsyncSession = Depends(get_db)):
     s = (await db.execute(select(PokemonSet).where(PokemonSet.id == set_id))).scalar_one_or_none()
     if not s:
         raise HTTPException(404, "Set not found")
-    for k, v in body.model_dump(exclude_none=True).items():
+    return {k: getattr(s, k) for k in ["id", "name_en", "name_jp", "set_code", "series", "release_date", "image_url", "is_japanese"]}
+
+
+@router.patch("/sets/{set_id}")
+async def update_set(set_id: str, body: SetCreate, db: AsyncSession = Depends(get_db)):
+    s = (await db.execute(select(PokemonSet).where(PokemonSet.id == set_id))).scalar_one_or_none()
+    if not s:
+        raise HTTPException(404, "Set not found")
+    for k, v in body.model_dump(exclude_unset=True).items():
         setattr(s, k, v)
     await db.commit()
     await search_service.rebuild_index()
@@ -47,7 +55,7 @@ async def update_set(set_id: int, body: SetCreate, db: AsyncSession = Depends(ge
 
 
 @router.delete("/sets/{set_id}")
-async def delete_set(set_id: int, db: AsyncSession = Depends(get_db)):
+async def delete_set(set_id: str, db: AsyncSession = Depends(get_db)):
     s = (await db.execute(select(PokemonSet).where(PokemonSet.id == set_id))).scalar_one_or_none()
     if not s:
         raise HTTPException(404, "Set not found")
@@ -80,12 +88,20 @@ async def create_product(body: ProductCreate, db: AsyncSession = Depends(get_db)
     return {"id": p.id}
 
 
-@router.patch("/products/{pid}")
-async def update_product(pid: int, body: ProductCreate, db: AsyncSession = Depends(get_db)):
+@router.get("/products/{pid}")
+async def get_product(pid: str, db: AsyncSession = Depends(get_db)):
     p = (await db.execute(select(Product).where(Product.id == pid))).scalar_one_or_none()
     if not p:
         raise HTTPException(404, "Product not found")
-    for k, v in body.model_dump(exclude_none=True).items():
+    return {k: getattr(p, k) for k in ["id", "set_id", "name_en", "name_jp", "product_type", "msrp_jpy", "msrp_usd", "image_url", "notes"]}
+
+
+@router.patch("/products/{pid}")
+async def update_product(pid: str, body: ProductCreate, db: AsyncSession = Depends(get_db)):
+    p = (await db.execute(select(Product).where(Product.id == pid))).scalar_one_or_none()
+    if not p:
+        raise HTTPException(404, "Product not found")
+    for k, v in body.model_dump(exclude_unset=True).items():
         setattr(p, k, v)
     await db.commit()
     await search_service.rebuild_index()
@@ -93,7 +109,7 @@ async def update_product(pid: int, body: ProductCreate, db: AsyncSession = Depen
 
 
 @router.delete("/products/{pid}")
-async def delete_product(pid: int, db: AsyncSession = Depends(get_db)):
+async def delete_product(pid: str, db: AsyncSession = Depends(get_db)):
     p = (await db.execute(select(Product).where(Product.id == pid))).scalar_one_or_none()
     if not p:
         raise HTTPException(404, "Product not found")
@@ -125,12 +141,20 @@ async def create_card(body: CardCreate, db: AsyncSession = Depends(get_db)):
     return {"id": c.id}
 
 
-@router.patch("/cards/{cid}")
-async def update_card(cid: int, body: CardCreate, db: AsyncSession = Depends(get_db)):
+@router.get("/cards/{cid}")
+async def get_card(cid: str, db: AsyncSession = Depends(get_db)):
     c = (await db.execute(select(Card).where(Card.id == cid))).scalar_one_or_none()
     if not c:
         raise HTTPException(404, "Card not found")
-    for k, v in body.model_dump(exclude_none=True).items():
+    return {k: getattr(c, k) for k in ["id", "set_id", "name_en", "name_jp", "card_number", "rarity", "image_url", "is_japanese"]}
+
+
+@router.patch("/cards/{cid}")
+async def update_card(cid: str, body: CardCreate, db: AsyncSession = Depends(get_db)):
+    c = (await db.execute(select(Card).where(Card.id == cid))).scalar_one_or_none()
+    if not c:
+        raise HTTPException(404, "Card not found")
+    for k, v in body.model_dump(exclude_unset=True).items():
         setattr(c, k, v)
     await db.commit()
     await search_service.rebuild_index()
@@ -138,7 +162,7 @@ async def update_card(cid: int, body: CardCreate, db: AsyncSession = Depends(get
 
 
 @router.delete("/cards/{cid}")
-async def delete_card(cid: int, db: AsyncSession = Depends(get_db)):
+async def delete_card(cid: str, db: AsyncSession = Depends(get_db)):
     c = (await db.execute(select(Card).where(Card.id == cid))).scalar_one_or_none()
     if not c:
         raise HTTPException(404, "Card not found")

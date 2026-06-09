@@ -11,6 +11,7 @@ from typing import Optional
 
 from rapidfuzz import process, fuzz
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from database import AsyncSessionLocal, Card, Product
 
@@ -26,34 +27,34 @@ async def rebuild_index() -> None:
     global _card_index, _product_index
     async with AsyncSessionLocal() as db:
         cards = (await db.execute(
-            select(Card).join(Card.set, isouter=True)
+            select(Card).options(selectinload(Card.set))
         )).scalars().all()
         products = (await db.execute(
-            select(Product).join(Product.set, isouter=True)
+            select(Product).options(selectinload(Product.set))
         )).scalars().all()
 
-    _card_index = [
-        {
-            "id":       c.id,
-            "name_en":  c.name_en,
-            "name_jp":  c.name_jp or "",
-            "set_name": c.set.name_en if c.set else "",
-            "rarity":   c.rarity or "",
-            "type":     "card",
-        }
-        for c in cards
-    ]
-    _product_index = [
-        {
-            "id":           p.id,
-            "name_en":      p.name_en,
-            "name_jp":      p.name_jp or "",
-            "set_name":     p.set.name_en if p.set else "",
-            "product_type": p.product_type,
-            "type":         "product",
-        }
-        for p in products
-    ]
+        _card_index = [
+            {
+                "id":       c.id,
+                "name_en":  c.name_en,
+                "name_jp":  c.name_jp or "",
+                "set_name": c.set.name_en if c.set else "",
+                "rarity":   c.rarity or "",
+                "type":     "card",
+            }
+            for c in cards
+        ]
+        _product_index = [
+            {
+                "id":           p.id,
+                "name_en":      p.name_en,
+                "name_jp":      p.name_jp or "",
+                "set_name":     p.set.name_en if p.set else "",
+                "product_type": p.product_type,
+                "type":         "product",
+            }
+            for p in products
+        ]
     log.info("Search index rebuilt: %d cards, %d products", len(_card_index), len(_product_index))
 
 

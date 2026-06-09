@@ -34,8 +34,9 @@
           <td class="td-dim" style="font-size:12px">{{ s.series or '—' }}</td>
           <td>{% if s.is_japanese %}<span class="badge badge-jp">JP</span>{% else %}<span class="badge badge-en">EN</span>{% endif %}</td>
           <td class="td-dim" style="font-size:12px">{{ s.release_date or '—' }}</td>
-          <td>
-            <button class="btn btn-danger btn-sm btn-icon" onclick="deleteSet({{ s.id }}, this)" title="Delete set">✕</button>
+          <td style="white-space:nowrap">
+            <button class="btn btn-sm btn-icon" onclick="openEditSet('{{ s.id }}')" title="Edit set" style="margin-right:4px">✎</button>
+            <button class="btn btn-danger btn-sm btn-icon" onclick="deleteSet('{{ s.id }}', this)" title="Delete set">✕</button>
           </td>
         </tr>
         {% endfor %}
@@ -126,7 +127,7 @@
       </div>
       <div class="form-row">
         <div class="form-group"><label class="form-label">Series</label><input name="series" class="form-input" placeholder="e.g. Scarlet &amp; Violet"></div>
-        <div class="form-group"><label class="form-label">Release Date</label><input name="release_date" class="form-input" placeholder="YYYY-MM-DD"></div>
+        <div class="form-group"><label class="form-label">Release Date</label><input name="release_date" class="form-input" type="date"></div>
       </div>
       <div class="form-group"><label class="form-label">Image URL</label><input name="image_url" class="form-input" type="url" placeholder="https://…"></div>
       <div class="form-group">
@@ -220,10 +221,171 @@
     </form>
   </div>
 </div>
+{# Edit Set #}
+<div class="modal-backdrop" id="modal-edit-set">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('modal-edit-set')">✕</button>
+    <div class="modal-title">Edit Set</div>
+    <form onsubmit="submitEditSet(event)">
+      <div class="form-group"><label class="form-label">Name (English) *</label><input name="name_en" class="form-input" required></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Name (Japanese)</label><input name="name_jp" class="form-input"></div>
+        <div class="form-group"><label class="form-label">Set Code</label><input name="set_code" class="form-input" placeholder="e.g. SV9"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Series</label><input name="series" class="form-input" placeholder="e.g. Scarlet &amp; Violet"></div>
+        <div class="form-group"><label class="form-label">Release Date</label><input name="release_date" class="form-input" type="date"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Image URL</label><input name="image_url" class="form-input" type="url" placeholder="https://…"></div>
+      <div class="form-group">
+        <label class="form-label">Language</label>
+        <select name="is_japanese" class="form-select">
+          <option value="true">Japanese</option>
+          <option value="false">English</option>
+        </select>
+      </div>
+      <button type="submit" class="btn btn-gold" style="width:100%">Save Changes</button>
+    </form>
+  </div>
+</div>
+
+{# Edit Product #}
+<div class="modal-backdrop" id="modal-edit-product">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('modal-edit-product')">✕</button>
+    <div class="modal-title">Edit Product</div>
+    <form onsubmit="submitEditProduct(event)">
+      <div class="form-group"><label class="form-label">Name (English) *</label><input name="name_en" class="form-input" required></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Name (Japanese)</label><input name="name_jp" class="form-input"></div>
+        <div class="form-group">
+          <label class="form-label">Set</label>
+          <select name="set_id" class="form-select">
+            <option value="">— None —</option>
+            {% for s in sets %}<option value="{{ s.id }}">{{ s.name_en }}</option>{% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Product Type *</label>
+          <select name="product_type" class="form-select">
+            <option value="booster_pack">Booster Pack</option>
+            <option value="booster_box">Booster Box</option>
+            <option value="special_box">Special Box</option>
+            <option value="etb">Elite Trainer Box</option>
+            <option value="gift_set">Gift Set</option>
+            <option value="promo">Promo Bundle</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">MSRP (JPY)</label>
+          <input name="msrp_jpy" class="form-input" type="number" step="1" placeholder="e.g. 6000">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">MSRP (USD)</label><input name="msrp_usd" class="form-input" type="number" step="0.01" placeholder="e.g. 39.99"></div>
+        <div class="form-group"><label class="form-label">Image URL</label><input name="image_url" class="form-input" type="url" placeholder="https://…"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Notes</label><textarea name="notes" class="form-textarea" rows="2"></textarea></div>
+      <button type="submit" class="btn btn-gold" style="width:100%">Save Changes</button>
+    </form>
+  </div>
+</div>
+
+{# Edit Card #}
+<div class="modal-backdrop" id="modal-edit-card">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('modal-edit-card')">✕</button>
+    <div class="modal-title">Edit Card</div>
+    <form onsubmit="submitEditCard(event)">
+      <div class="form-group"><label class="form-label">Name (English) *</label><input name="name_en" class="form-input" required></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Name (Japanese)</label><input name="name_jp" class="form-input"></div>
+        <div class="form-group">
+          <label class="form-label">Set</label>
+          <select name="set_id" class="form-select">
+            <option value="">— None —</option>
+            {% for s in sets %}<option value="{{ s.id }}">{{ s.name_en }}</option>{% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Card Number</label><input name="card_number" class="form-input" placeholder="e.g. 006/165"></div>
+        <div class="form-group"><label class="form-label">Rarity</label><input name="rarity" class="form-input" placeholder="e.g. Double Rare"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Image URL</label><input name="image_url" class="form-input" type="url" placeholder="https://…"></div>
+        <div class="form-group">
+          <label class="form-label">Language</label>
+          <select name="is_japanese" class="form-select">
+            <option value="true">Japanese</option>
+            <option value="false">English</option>
+          </select>
+        </div>
+      </div>
+      <button type="submit" class="btn btn-gold" style="width:100%">Save Changes</button>
+    </form>
+  </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script>
+// ── FX rates (2-hour client-side cache) ───────────────────
+let _fx = null, _fxAt = 0;
+async function getFx() {
+  if (_fx && Date.now() - _fxAt < 2 * 60 * 60 * 1000) return _fx;
+  try {
+    const r = await fetch('/api/prices/fx');
+    if (r.ok) { _fx = await r.json(); _fxAt = Date.now(); }
+  } catch {}
+  return _fx;
+}
+
+// ── JPY ↔ USD auto-conversion in Add Product modal ────────
+const _jpyInput = document.querySelector('#modal-add-product [name="msrp_jpy"]');
+const _usdInput = document.querySelector('#modal-add-product [name="msrp_usd"]');
+const _editJpyInput = document.querySelector('#modal-edit-product [name="msrp_jpy"]');
+const _editUsdInput = document.querySelector('#modal-edit-product [name="msrp_usd"]');
+let _converting = false;
+if (_jpyInput && _usdInput) {
+  _jpyInput.addEventListener('input', async () => {
+    if (_converting) return;
+    const fx = await getFx();
+    if (!fx || !_jpyInput.value) { _usdInput.value = ''; return; }
+    _converting = true;
+    _usdInput.value = (parseFloat(_jpyInput.value) / fx.usd_jpy).toFixed(2);
+    _converting = false;
+  });
+  _usdInput.addEventListener('input', async () => {
+    if (_converting) return;
+    const fx = await getFx();
+    if (!fx || !_usdInput.value) { _jpyInput.value = ''; return; }
+    _converting = true;
+    _jpyInput.value = Math.round(parseFloat(_usdInput.value) * fx.usd_jpy);
+    _converting = false;
+  });
+}
+if (_editJpyInput && _editUsdInput) {
+  _editJpyInput.addEventListener('input', async () => {
+    if (_converting) return;
+    const fx = await getFx();
+    if (!fx || !_editJpyInput.value) { _editUsdInput.value = ''; return; }
+    _converting = true;
+    _editUsdInput.value = (parseFloat(_editJpyInput.value) / fx.usd_jpy).toFixed(2);
+    _converting = false;
+  });
+  _editUsdInput.addEventListener('input', async () => {
+    if (_converting) return;
+    const fx = await getFx();
+    if (!fx || !_editUsdInput.value) { _editJpyInput.value = ''; return; }
+    _converting = true;
+    _editJpyInput.value = Math.round(parseFloat(_editUsdInput.value) * fx.usd_jpy);
+    _converting = false;
+  });
+}
+
 // ── Tab switching ──────────────────────────────────────────
 document.getElementById('admin-tabs').addEventListener('click', e => {
   const btn = e.target.closest('.filter-tab');
@@ -255,7 +417,7 @@ async function loadProducts() {
         <td class="td-dim" style="font-size:12px">${p.name_jp || '—'}</td>
         <td><span class="badge badge-box">${(p.product_type||'').replace('_',' ')}</span></td>
         <td class="td-dim" style="font-size:12px">${p.set_name || '—'}</td>
-        <td><button class="btn btn-danger btn-sm btn-icon" onclick="deleteProduct(${p.id}, this)">✕</button></td>
+        <td style="white-space:nowrap"><button class="btn btn-sm btn-icon" onclick="openEditProduct('${p.id}')" title="Edit" style="margin-right:4px">✎</button><button class="btn btn-danger btn-sm btn-icon" onclick="deleteProduct('${p.id}', this)">✕</button></td>
       </tr>`).join('')}
     </tbody></table></div>`;
   } catch { container.innerHTML = '<div class="empty-state" style="padding:30px"><div class="empty-text">Error loading products</div></div>'; }
@@ -274,7 +436,7 @@ async function loadCards() {
         <td class="td-dim" style="font-size:12px">${c.name_jp || '—'}</td>
         <td class="td-dim" style="font-size:12px">${c.set_name || '—'}</td>
         <td class="td-dim" style="font-size:12px">${c.rarity || '—'}</td>
-        <td><button class="btn btn-danger btn-sm btn-icon" onclick="deleteCard(${c.id}, this)">✕</button></td>
+        <td style="white-space:nowrap"><button class="btn btn-sm btn-icon" onclick="openEditCard('${c.id}')" title="Edit" style="margin-right:4px">✎</button><button class="btn btn-danger btn-sm btn-icon" onclick="deleteCard('${c.id}', this)">✕</button></td>
       </tr>`).join('')}
     </tbody></table></div>`;
   } catch { container.innerHTML = '<div class="empty-state" style="padding:30px"><div class="empty-text">Error loading cards</div></div>'; }
@@ -295,9 +457,10 @@ async function submitProduct(e) {
   e.preventDefault();
   const fd = new FormData(e.target);
   const body = Object.fromEntries(fd.entries());
-  if (body.set_id) body.set_id = parseInt(body.set_id) || null;
-  if (body.msrp_jpy) body.msrp_jpy = parseFloat(body.msrp_jpy);
-  if (body.msrp_usd) body.msrp_usd = parseFloat(body.msrp_usd);
+  body.set_id = body.set_id ? parseInt(body.set_id) : null;
+  if (body.msrp_jpy) body.msrp_jpy = parseFloat(body.msrp_jpy); else body.msrp_jpy = null;
+  if (body.msrp_usd) body.msrp_usd = parseFloat(body.msrp_usd); else body.msrp_usd = null;
+  ['name_jp', 'image_url', 'notes'].forEach(k => { if (!body[k]) body[k] = null; });
   const r = await fetch('/api/admin/products', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
   if (r.ok) { closeModal('modal-add-product'); await loadProducts(); }
   else { alert('Error: ' + JSON.stringify(await r.json())); }
@@ -308,7 +471,8 @@ async function submitCard(e) {
   const fd = new FormData(e.target);
   const body = Object.fromEntries(fd.entries());
   body.is_japanese = body.is_japanese === 'true';
-  if (body.set_id) body.set_id = parseInt(body.set_id) || null;
+  body.set_id = body.set_id ? parseInt(body.set_id) : null;
+  ['name_jp', 'card_number', 'rarity', 'image_url'].forEach(k => { if (!body[k]) body[k] = null; });
   const r = await fetch('/api/admin/cards', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
   if (r.ok) { closeModal('modal-add-card'); await loadCards(); }
   else { alert('Error: ' + JSON.stringify(await r.json())); }
@@ -318,19 +482,19 @@ async function submitCard(e) {
 async function deleteSet(id, btn) {
   if (!confirm('Delete this set and all its products/cards?')) return;
   const r = await fetch(`/api/admin/sets/${id}`, { method:'DELETE' });
-  if (r.ok) btn.closest('tr').remove();
+  if (r.ok) location.reload();
   else alert('Error deleting set');
 }
 async function deleteProduct(id, btn) {
   if (!confirm('Delete this product?')) return;
   const r = await fetch(`/api/admin/products/${id}`, { method:'DELETE' });
-  if (r.ok) btn.closest('tr').remove();
+  if (r.ok) await loadProducts();
   else alert('Error deleting product');
 }
 async function deleteCard(id, btn) {
   if (!confirm('Delete this card?')) return;
   const r = await fetch(`/api/admin/cards/${id}`, { method:'DELETE' });
-  if (r.ok) btn.closest('tr').remove();
+  if (r.ok) await loadCards();
   else alert('Error deleting card');
 }
 
@@ -357,6 +521,94 @@ async function saveCooldown() {
     body: JSON.stringify({ cooldown_hours: v })
   });
   if (r.ok) alert('Cooldown saved!');
+}
+
+// ── Edit Set ───────────────────────────────────────────────
+let _editSetId = null;
+async function openEditSet(id) {
+  _editSetId = id;
+  const r = await fetch(`/api/admin/sets/${id}`);
+  if (!r.ok) { alert('Error loading set'); return; }
+  const s = await r.json();
+  const form = document.querySelector('#modal-edit-set form');
+  form.querySelector('[name="name_en"]').value   = s.name_en || '';
+  form.querySelector('[name="name_jp"]').value   = s.name_jp || '';
+  form.querySelector('[name="set_code"]').value  = s.set_code || '';
+  form.querySelector('[name="series"]').value    = s.series || '';
+  form.querySelector('[name="release_date"]').value = s.release_date || '';
+  form.querySelector('[name="image_url"]').value = s.image_url || '';
+  form.querySelector('[name="is_japanese"]').value = s.is_japanese ? 'true' : 'false';
+  openModal('modal-edit-set');
+}
+async function submitEditSet(e) {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const body = Object.fromEntries(fd.entries());
+  body.is_japanese = body.is_japanese === 'true';
+  ['name_jp', 'set_code', 'series', 'release_date', 'image_url'].forEach(k => { if (!body[k]) body[k] = null; });
+  const r = await fetch(`/api/admin/sets/${_editSetId}`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+  if (r.ok) { closeModal('modal-edit-set'); location.reload(); }
+  else { alert('Error: ' + JSON.stringify(await r.json())); }
+}
+
+// ── Edit Product ───────────────────────────────────────────
+let _editProductId = null;
+async function openEditProduct(id) {
+  _editProductId = id;
+  const r = await fetch(`/api/admin/products/${id}`);
+  if (!r.ok) { alert('Error loading product'); return; }
+  const p = await r.json();
+  const form = document.querySelector('#modal-edit-product form');
+  form.querySelector('[name="name_en"]').value      = p.name_en || '';
+  form.querySelector('[name="name_jp"]').value      = p.name_jp || '';
+  form.querySelector('[name="set_id"]').value       = p.set_id ?? '';
+  form.querySelector('[name="product_type"]').value = p.product_type || 'booster_pack';
+  form.querySelector('[name="msrp_jpy"]').value     = p.msrp_jpy ?? '';
+  form.querySelector('[name="msrp_usd"]').value     = p.msrp_usd ?? '';
+  form.querySelector('[name="image_url"]').value    = p.image_url || '';
+  form.querySelector('[name="notes"]').value        = p.notes || '';
+  openModal('modal-edit-product');
+}
+async function submitEditProduct(e) {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const body = Object.fromEntries(fd.entries());
+  body.set_id = body.set_id ? parseInt(body.set_id) : null;
+  if (body.msrp_jpy) body.msrp_jpy = parseFloat(body.msrp_jpy); else body.msrp_jpy = null;
+  if (body.msrp_usd) body.msrp_usd = parseFloat(body.msrp_usd); else body.msrp_usd = null;
+  ['name_jp', 'image_url', 'notes'].forEach(k => { if (!body[k]) body[k] = null; });
+  const r = await fetch(`/api/admin/products/${_editProductId}`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+  if (r.ok) { closeModal('modal-edit-product'); await loadProducts(); }
+  else { alert('Error: ' + JSON.stringify(await r.json())); }
+}
+
+// ── Edit Card ──────────────────────────────────────────────
+let _editCardId = null;
+async function openEditCard(id) {
+  _editCardId = id;
+  const r = await fetch(`/api/admin/cards/${id}`);
+  if (!r.ok) { alert('Error loading card'); return; }
+  const c = await r.json();
+  const form = document.querySelector('#modal-edit-card form');
+  form.querySelector('[name="name_en"]').value    = c.name_en || '';
+  form.querySelector('[name="name_jp"]').value    = c.name_jp || '';
+  form.querySelector('[name="set_id"]').value     = c.set_id ?? '';
+  form.querySelector('[name="card_number"]').value = c.card_number || '';
+  form.querySelector('[name="rarity"]').value     = c.rarity || '';
+  form.querySelector('[name="image_url"]').value  = c.image_url || '';
+  form.querySelector('[name="is_japanese"]').value = c.is_japanese ? 'true' : 'false';
+  openModal('modal-edit-card');
+}
+async function submitEditCard(e) {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const body = Object.fromEntries(fd.entries());
+  body.is_japanese = body.is_japanese === 'true';
+  body.set_id = body.set_id ? parseInt(body.set_id) : null;
+  ['name_jp', 'card_number', 'rarity', 'image_url'].forEach(k => { if (!body[k]) body[k] = null; });
+  const r = await fetch(`/api/admin/cards/${_editCardId}`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+  if (r.ok) { closeModal('modal-edit-card'); await loadCards(); }
+  else { alert('Error: ' + JSON.stringify(await r.json())); }
 }
 
 async function savePushover() {

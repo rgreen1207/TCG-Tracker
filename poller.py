@@ -5,7 +5,7 @@ Uses source_registry.collect_prices() — automatically skips unconfigured sourc
 from __future__ import annotations
 import asyncio
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
  
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -41,7 +41,8 @@ async def _hours_since_last_alert(item_type: str, item_id: int) -> Optional[floa
         row = result.scalar_one_or_none()
     if not row:
         return None
-    return (datetime.utcnow() - row.ts).total_seconds() / 3600
+    ts = row.ts if row.ts.tzinfo else row.ts.replace(tzinfo=timezone.utc)
+    return (datetime.now(timezone.utc) - ts).total_seconds() / 3600
  
  
 async def _get_cooldown() -> float:
@@ -95,7 +96,7 @@ async def run_price_check():
         return
  
     state["running"] = True
-    state["last_run"] = datetime.utcnow()
+    state["last_run"] = datetime.now(timezone.utc)
     log.info("=== Price check started ===")
  
     try:
@@ -151,12 +152,12 @@ def start_scheduler():
         seconds=settings.poll_interval_seconds,
         id="price_check",
         replace_existing=True,
-        next_run_time=datetime.utcnow(),
+        next_run_time=datetime.now(timezone.utc),
     )
     scheduler.add_job(
         get_usd_jpy,
         trigger="interval",
-        hours=24,
+        hours=2,
         id="fx_refresh",
         replace_existing=True,
     )

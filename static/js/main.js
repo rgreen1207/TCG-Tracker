@@ -76,19 +76,6 @@ document.querySelectorAll('.modal-backdrop').forEach(m => {
   m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
 });
 
-/* ── Notification toggle ───────────────────────────────────── */
-const notifToggle = document.getElementById('notif-toggle');
-if (notifToggle) {
-  notifToggle.addEventListener('click', async () => {
-    const isOn = notifToggle.classList.contains('on');
-    notifToggle.classList.toggle('on', !isOn);
-    await fetch('/api/admin/notifications', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ enabled: !isOn }),
-    });
-  });
-}
 
 /* ── Flash messages (auto-dismiss) ─────────────────────────── */
 document.querySelectorAll('.flash').forEach(el => {

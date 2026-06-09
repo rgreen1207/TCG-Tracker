@@ -14,7 +14,7 @@ router = APIRouter(prefix="/api/collection")
 
 class CollectionCreate(BaseModel):
     item_type:         str            # product | card
-    item_id:           int
+    item_id:           str
     status:            str            # raw | graded
     grader:            Optional[str] = None   # PSA | TAG
     grade:             Optional[float] = None
@@ -113,7 +113,7 @@ async def add_item(body: CollectionCreate, db: AsyncSession = Depends(get_db)):
 
 @router.patch("/{item_id}", dependencies=[Depends(require_admin)])
 async def update_item(
-    item_id: int,
+    item_id: str,
     body: CollectionUpdate,
     db: AsyncSession = Depends(get_db),
 ):
@@ -122,7 +122,7 @@ async def update_item(
     )).scalar_one_or_none()
     if not item:
         raise HTTPException(404, "Item not found")
-    for field, val in body.model_dump(exclude_none=True).items():
+    for field, val in body.model_dump(exclude_unset=True).items():
         setattr(item, field, val)
     await db.commit()
     return {"ok": True}

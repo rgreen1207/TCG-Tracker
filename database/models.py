@@ -3,11 +3,16 @@ SQLAlchemy ORM models — single SQLite file at data/tracker.db
 """
 from __future__ import annotations
 from datetime import datetime
+from uuid import uuid4
 from sqlalchemy import (
     Column, Integer, String, Float, Boolean,
     DateTime, ForeignKey, Text, UniqueConstraint, Index
 )
 from sqlalchemy.orm import DeclarativeBase, relationship
+
+
+def _uuid() -> str:
+    return str(uuid4())
 
 
 class Base(DeclarativeBase):
@@ -21,7 +26,7 @@ class Base(DeclarativeBase):
 class PokemonSet(Base):
     __tablename__ = "sets"
 
-    id           = Column(Integer, primary_key=True, autoincrement=True)
+    id           = Column(String(36), primary_key=True, default=_uuid)
     tcg_set_id   = Column(String(32), unique=True, nullable=True)   # pokemontcg.io id
     name_en      = Column(String(256), nullable=False)
     name_jp      = Column(String(256), nullable=True)
@@ -40,8 +45,8 @@ class Product(Base):
     """Booster packs, booster boxes, special boxes, ETBs, gift sets, promo bundles."""
     __tablename__ = "products"
 
-    id           = Column(Integer, primary_key=True, autoincrement=True)
-    set_id       = Column(Integer, ForeignKey("sets.id"), nullable=True)
+    id           = Column(String(36), primary_key=True, default=_uuid)
+    set_id       = Column(String(36), ForeignKey("sets.id"), nullable=True)
     name_en      = Column(String(256), nullable=False)
     name_jp      = Column(String(256), nullable=True)
     product_type = Column(String(32), nullable=False)   # booster_pack | booster_box | special_box | etb | gift_set | promo
@@ -63,8 +68,8 @@ class Card(Base):
     """Individual cards — both Japanese and English."""
     __tablename__ = "cards"
 
-    id          = Column(Integer, primary_key=True, autoincrement=True)
-    set_id      = Column(Integer, ForeignKey("sets.id"), nullable=True)
+    id          = Column(String(36), primary_key=True, default=_uuid)
+    set_id      = Column(String(36), ForeignKey("sets.id"), nullable=True)
     tcg_card_id = Column(String(64), nullable=True)   # pokemontcg.io card id
     card_number = Column(String(16), nullable=True)
     name_en     = Column(String(256), nullable=False)
@@ -91,7 +96,7 @@ class PriceHistory(Base):
 
     id             = Column(Integer, primary_key=True, autoincrement=True)
     item_type      = Column(String(16), nullable=False)   # product | card
-    item_id        = Column(Integer, nullable=False)
+    item_id        = Column(String(36), nullable=False)
     source         = Column(String(64), nullable=False)   # eBay | PriceCharting | 130point
     price_usd      = Column(Float, nullable=True)
     price_jpy      = Column(Float, nullable=True)
@@ -123,9 +128,9 @@ class PriceHistory(Base):
 class CollectionItem(Base):
     __tablename__ = "collection"
 
-    id             = Column(Integer, primary_key=True, autoincrement=True)
+    id             = Column(String(36), primary_key=True, default=_uuid)
     item_type      = Column(String(16), nullable=False)   # product | card
-    item_id        = Column(Integer, nullable=False)
+    item_id        = Column(String(36), nullable=False)
     status         = Column(String(16), nullable=False)   # raw | graded
     grader         = Column(String(16), nullable=True)    # PSA | TAG
     grade          = Column(Float, nullable=True)         # 9.5, 10, etc.
@@ -144,9 +149,9 @@ class CollectionItem(Base):
 class WatchlistItem(Base):
     __tablename__ = "watchlist"
 
-    id              = Column(Integer, primary_key=True, autoincrement=True)
+    id              = Column(String(36), primary_key=True, default=_uuid)
     item_type       = Column(String(16), nullable=False)
-    item_id         = Column(Integer, nullable=False)
+    item_id         = Column(String(36), nullable=False)
     target_price_usd = Column(Float, nullable=True)
     notes           = Column(Text, nullable=True)
     notified        = Column(Boolean, default=False)
@@ -177,7 +182,7 @@ class AlertLog(Base):
 
     id         = Column(Integer, primary_key=True, autoincrement=True)
     item_type  = Column(String(16), nullable=False)
-    item_id    = Column(Integer, nullable=False)
+    item_id    = Column(String(36), nullable=False)
     item_name  = Column(String(256), nullable=True)
     price_usd  = Column(Float, nullable=True)
     price_jpy  = Column(Float, nullable=True)

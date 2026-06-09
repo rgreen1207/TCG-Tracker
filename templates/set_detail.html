@@ -83,8 +83,8 @@
       <div style="display:flex;gap:6px">
         {% if p.url %}<a href="{{ p.url }}" target="_blank" rel="noopener" class="btn btn-primary btn-sm">Buy ↗</a>{% endif %}
         {% if admin %}
-          <button class="btn btn-sm btn-gold" onclick="openAddToCollection('product', {{ p.id }}, '{{ p.name_en | replace("'","") }}')">+ Collection</button>
-          <button class="btn btn-sm" style="border-color:var(--border);color:var(--text2)" onclick="openAddToWatchlist('product', {{ p.id }}, '{{ p.name_en | replace("'","") }}')">+ Watch</button>
+          <button class="btn btn-sm btn-gold" onclick="openAddToCollection('product', '{{ p.id }}', '{{ p.name_en | replace("'","") }}')">+ Collection</button>
+          <button class="btn btn-sm" style="border-color:var(--border);color:var(--text2)" onclick="openAddToWatchlist('product', '{{ p.id }}', '{{ p.name_en | replace("'","") }}')">+ Watch</button>
         {% endif %}
       </div>
     </div>
@@ -118,8 +118,8 @@
         {% if admin %}
         <td>
           <div style="display:flex;gap:4px">
-            <button class="btn btn-sm btn-gold" onclick="openAddToCollection('card', {{ c.id }}, '{{ c.name_en | replace("'","") }}')">+ Own</button>
-            <button class="btn btn-sm" style="border-color:var(--border);color:var(--text2)" onclick="openAddToWatchlist('card', {{ c.id }}, '{{ c.name_en | replace("'","") }}')">+ Watch</button>
+            <button class="btn btn-sm btn-gold" onclick="openAddToCollection('card', '{{ c.id }}', '{{ c.name_en | replace("'","") }}')">+ Own</button>
+            <button class="btn btn-sm" style="border-color:var(--border);color:var(--text2)" onclick="openAddToWatchlist('card', '{{ c.id }}', '{{ c.name_en | replace("'","") }}')">+ Watch</button>
           </div>
         </td>
         {% endif %}
@@ -221,7 +221,7 @@
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-  {% for p in products %}renderSparkline('spark-p{{ p.id }}', 'product', {{ p.id }});{% endfor %}
+  {% for p in products %}renderSparkline('spark-p{{ p.id }}', 'product', '{{ p.id }}');{% endfor %}
 });
 
 function openAddToCollection(type, id, name) {

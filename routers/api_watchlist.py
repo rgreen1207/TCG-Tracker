@@ -14,7 +14,7 @@ router = APIRouter(prefix="/api/watchlist")
 
 class WatchlistCreate(BaseModel):
     item_type:        str
-    item_id:          int
+    item_id:          str
     target_price_usd: Optional[float] = None
     notes:            Optional[str] = None
 
@@ -76,7 +76,7 @@ async def add_watchlist(body: WatchlistCreate, db: AsyncSession = Depends(get_db
 
 
 @router.delete("/{wid}", dependencies=[Depends(require_admin)])
-async def remove_watchlist(wid: int, db: AsyncSession = Depends(get_db)):
+async def remove_watchlist(wid: str, db: AsyncSession = Depends(get_db)):
     item = (await db.execute(
         select(WatchlistItem).where(WatchlistItem.id == wid)
     )).scalar_one_or_none()

@@ -140,7 +140,7 @@ async def sets_page(
 # ── Set detail ────────────────────────────────────────────────
  
 @router.get("/sets/{set_id}", response_class=HTMLResponse)
-async def set_detail(set_id: int, request: Request, db: AsyncSession = Depends(get_db)):
+async def set_detail(set_id: str, request: Request, db: AsyncSession = Depends(get_db)):
     s = (await db.execute(
         select(PokemonSet).where(PokemonSet.id == set_id)
     )).scalar_one_or_none()

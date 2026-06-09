@@ -74,7 +74,15 @@
     </tr></thead>
     <tbody>
       {% for item in items %}
-      <tr data-filter-status="{{ item.status }}" data-filter-grader="{{ item.grader | lower if item.grader else '' }}" data-filter-type="{{ item.item_type }}">
+      <tr data-col-id="{{ item.id }}"
+          data-status="{{ item.status }}"
+          data-grader="{{ item.grader or '' }}"
+          data-grade="{{ item.grade or '' }}"
+          data-quantity="{{ item.quantity }}"
+          data-acquired="{{ item.acquired_price_usd or '' }}"
+          data-date="{{ item.acquired_date or '' }}"
+          data-notes="{{ item.notes or '' }}"
+          data-filter-status="{{ item.status }}" data-filter-grader="{{ item.grader | lower if item.grader else '' }}" data-filter-type="{{ item.item_type }}">
         <td class="td-name">
           {% if item.image_url %}
             <img src="{{ item.image_url }}" alt="" style="width:28px;height:28px;object-fit:contain;border-radius:4px;vertical-align:middle;margin-right:8px">
@@ -121,8 +129,9 @@
           {% endif %}
         </td>
         {% if admin %}
-        <td>
-          <button class="btn btn-danger btn-sm btn-icon" title="Remove" onclick="deleteCollectionItem({{ item.id }}, this)">✕</button>
+        <td style="white-space:nowrap">
+          <button class="btn btn-sm btn-icon" title="Edit" style="margin-right:4px" onclick="openEditCollection('{{ item.id }}')">✎</button>
+          <button class="btn btn-danger btn-sm btn-icon" title="Remove" onclick="deleteCollectionItem('{{ item.id }}', this)">✕</button>
         </td>
         {% endif %}
       </tr>
@@ -137,6 +146,59 @@
   <div class="empty-text">
     Your collection is empty.<br>
     Browse <a href="/sets">Sets</a> or <a href="/search">Search</a> for cards to add.
+  </div>
+</div>
+{% endif %}
+
+{% if admin %}
+<div class="modal-backdrop" id="modal-edit-collection">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('modal-edit-collection')">✕</button>
+    <div class="modal-title">Edit Collection Item</div>
+    <form onsubmit="submitEditCollection(event)">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Status</label>
+          <select name="status" class="form-select">
+            <option value="raw">Raw</option>
+            <option value="graded">Graded</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Quantity</label>
+          <input name="quantity" class="form-input" type="number" min="1" step="1" value="1">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Grader</label>
+          <select name="grader" class="form-select">
+            <option value="">— None —</option>
+            <option value="PSA">PSA</option>
+            <option value="TAG">TAG</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Grade</label>
+          <input name="grade" class="form-input" type="number" min="1" max="10" step="0.5" placeholder="e.g. 10">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Acquired Price (USD)</label>
+          <input name="acquired_price_usd" class="form-input" type="number" step="0.01" placeholder="e.g. 49.99">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Acquired Date</label>
+          <input name="acquired_date" class="form-input" type="date">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Notes</label>
+        <textarea name="notes" class="form-textarea" rows="2"></textarea>
+      </div>
+      <button type="submit" class="btn btn-gold" style="width:100%">Save Changes</button>
+    </form>
   </div>
 </div>
 {% endif %}
@@ -163,6 +225,37 @@ document.getElementById('col-filter')?.addEventListener('click', e => {
     row.style.display = match ? '' : 'none';
   });
 });
+
+let _editColId = null;
+function openEditCollection(id) {
+  _editColId = id;
+  const row = document.querySelector(`tr[data-col-id="${id}"]`);
+  const form = document.querySelector('#modal-edit-collection form');
+  form.querySelector('[name="status"]').value           = row.dataset.status || 'raw';
+  form.querySelector('[name="grader"]').value           = row.dataset.grader || '';
+  form.querySelector('[name="grade"]').value            = row.dataset.grade || '';
+  form.querySelector('[name="quantity"]').value         = row.dataset.quantity || 1;
+  form.querySelector('[name="acquired_price_usd"]').value = row.dataset.acquired || '';
+  form.querySelector('[name="acquired_date"]').value    = row.dataset.date || '';
+  form.querySelector('[name="notes"]').value            = row.dataset.notes || '';
+  openModal('modal-edit-collection');
+}
+async function submitEditCollection(e) {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const body = Object.fromEntries(fd.entries());
+  body.quantity = parseInt(body.quantity) || 1;
+  if (body.acquired_price_usd) body.acquired_price_usd = parseFloat(body.acquired_price_usd); else body.acquired_price_usd = null;
+  if (body.grade) body.grade = parseFloat(body.grade); else body.grade = null;
+  if (!body.grader) body.grader = null;
+  if (!body.acquired_date) body.acquired_date = null;
+  if (!body.notes) body.notes = null;
+  const r = await fetch(`/api/collection/${_editColId}`, {
+    method: 'PATCH', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)
+  });
+  if (r.ok) { closeModal('modal-edit-collection'); location.reload(); }
+  else { alert('Error saving changes'); }
+}
 
 async function deleteCollectionItem(id, btn) {
   if (!confirm('Remove this item from your collection?')) return;

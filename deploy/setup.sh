@@ -171,13 +171,6 @@ server {
         proxy_read_timeout 60s;
     }
  
-    # Static files served directly by Nginx (no hardcoded user path)
-    location /static/ {
-        alias $REPO_DIR/static/;
-        expires 7d;
-        add_header Cache-Control "public, immutable";
-    }
- 
     # Block sensitive paths
     location ~ /\.          { deny all; }
     location ~ /\.env       { deny all; }

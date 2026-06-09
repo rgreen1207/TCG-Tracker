@@ -71,7 +71,7 @@
       <div style="display:flex;gap:6px">
         {% if p.url %}<a href="{{ p.url }}" target="_blank" rel="noopener" class="btn btn-primary btn-sm">Buy ↗</a>{% endif %}
         {% if admin %}
-          <button class="btn btn-sm btn-gold" onclick="quickAdd('product',{{ p.id }},'{{ p.name_en | replace("'","") }}')">+ Own</button>
+          <button class="btn btn-sm btn-gold" onclick="quickAdd('product','{{ p.id }}','{{ p.name_en | replace("'","") }}')">+ Own</button>
         {% endif %}
       </div>
     </div>

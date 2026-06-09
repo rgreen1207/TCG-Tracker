@@ -73,7 +73,7 @@
         <td class="td-dim" style="font-size:12px;max-width:120px">{{ w.notes or '—' }}</td>
         {% if admin %}
         <td>
-          <button class="btn btn-danger btn-sm btn-icon" onclick="removeWatch({{ w.id }}, this)" title="Remove">✕</button>
+          <button class="btn btn-danger btn-sm btn-icon" onclick="removeWatch('{{ w.id }}', this)" title="Remove">✕</button>
         </td>
         {% endif %}
       </tr>
